@@ -1,19 +1,19 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
  *
  ****************************************************************************/
 
-#pragma once
+
+#ifndef MissionManager_H
+#define MissionManager_H
 
 #include "PlanManager.h"
 
 Q_DECLARE_LOGGING_CATEGORY(MissionManagerLog)
-
-class Vehicle;
 
 class MissionManager : public PlanManager
 {
@@ -42,11 +42,10 @@ private slots:
     void _mavlinkMessageReceived(const mavlink_message_t& message);
 
 private:
-    void _handleHighLatency(const mavlink_message_t& message);
-    void _handleHighLatency2(const mavlink_message_t& message);
     void _handleMissionCurrent(const mavlink_message_t& message);
-    void _updateMissionIndex(int index);
     void _handleHeartbeat(const mavlink_message_t& message);
 
     int _cachedLastCurrentIndex;
 };
+
+#endif

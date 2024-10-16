@@ -8,14 +8,15 @@
  ****************************************************************************/
 
 
-import QtQuick
-import QtQuick.Controls
+import QtQuick              2.3
+import QtQuick.Controls     1.2
+import QtGraphicalEffects   1.0
 
-import QGroundControl.FactSystem
-import QGroundControl.FactControls
-import QGroundControl.Palette
-import QGroundControl.Controls
-import QGroundControl.ScreenTools
+import QGroundControl.FactSystem    1.0
+import QGroundControl.FactControls  1.0
+import QGroundControl.Palette       1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.ScreenTools   1.0
 
 SetupPage {
     id:             safetyPage
@@ -31,7 +32,7 @@ SetupPage {
 
             FactPanelController { id: controller; factPanel: safetyPage.viewPanel }
 
-            QGCPalette { id: qgcPal; colorGroupEnabled: true }
+            QGCPalette { id: palette; colorGroupEnabled: true }
 
             property Fact _failsafeBattMah:     controller.getParameterFact(-1, "r.BATT_LOW_MAH")
             property Fact _failsafeBattVoltage: controller.getParameterFact(-1, "r.BATT_LOW_VOLT")
@@ -50,13 +51,13 @@ SetupPage {
 
                 QGCLabel {
                     text:       qsTr("Failsafe Triggers")
-                    font.bold:   true
+                    font.family: ScreenTools.demiboldFontFamily
                 }
 
                 Rectangle {
                     width:  throttlePWMField.x + throttlePWMField.width + _margins
                     height: gcsCheckbox.y + gcsCheckbox.height + _margins
-                    color:  qgcPal.windowShade
+                    color:  palette.windowShade
 
                     QGCCheckBox {
                         id:                 throttleEnableCheckBox
@@ -139,13 +140,13 @@ SetupPage {
 
                 QGCLabel {
                     text:           qsTr("Return to Launch")
-                    font.bold:      true
+                    font.family:    ScreenTools.demiboldFontFamily
                 }
 
                 Rectangle {
                     width:  rltAltField.x + rltAltField.width + _margins
                     height: rltAltField.y + rltAltField.height + _margins
-                    color:  qgcPal.windowShade
+                    color:  palette.windowShade
 
                     QGCRadioButton {
                         id:                 returnAtCurrentRadio

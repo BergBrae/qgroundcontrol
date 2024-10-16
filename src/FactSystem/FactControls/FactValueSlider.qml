@@ -1,11 +1,11 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Dialogs
+import QtQuick          2.3
+import QtQuick.Controls 1.2
+import QtQuick.Dialogs  1.2
 
-import QGroundControl.Palette
-import QGroundControl.ScreenTools
-import QGroundControl.Controls
-import QGroundControl.FactSystem
+import QGroundControl.Palette       1.0
+import QGroundControl.ScreenTools   1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.FactSystem    1.0
 
 Rectangle {
     height: _itemHeight
@@ -97,7 +97,7 @@ Rectangle {
                 onClicked: {
                     valueListView.focus = true
                     if (_currentIndex === index) {
-                        editDialogComponent.createObject(mainWindow, { title: qsTr("Value Details") }).open()
+                        mainWindow.showComponentDialog(editDialogComponent, qsTr("Value Details"), mainWindow.showDialogDefaultWidth, StandardButton.Save | StandardButton.Cancel)
                     } else {
                         _currentIndex = index
                         valueListView.positionViewAtIndex(_currentIndex, ListView.Center)

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -8,25 +8,27 @@
  ****************************************************************************/
 
 
-#pragma once
+#ifndef APMParameterMetaData_H
+#define APMParameterMetaData_H
 
-#include <QtCore/QObject>
-#include <QtCore/QMap>
-#include <QtCore/QXmlStreamReader>
-#include <QtCore/QLoggingCategory>
+#include <QObject>
+#include <QMap>
+#include <QPointer>
+#include <QXmlStreamReader>
+#include <QLoggingCategory>
 
-#include "MAVLinkLib.h"
-#include "FactMetaData.h"
+#include "FactSystem.h"
+#include "AutoPilotPlugin.h"
+#include "Vehicle.h"
 
 Q_DECLARE_LOGGING_CATEGORY(APMParameterMetaDataLog)
 Q_DECLARE_LOGGING_CATEGORY(APMParameterMetaDataVerboseLog)
 
-class APMFactMetaDataRaw : public QObject
+class APMFactMetaDataRaw
 {
-    Q_OBJECT
 public:
-    APMFactMetaDataRaw(QObject *parent = nullptr)
-        : QObject(parent), rebootRequired(false)
+    APMFactMetaDataRaw(void)
+        : rebootRequired(false)
     { }
 
     QString name;
@@ -39,7 +41,6 @@ public:
     QString incrementSize;
     QString units;
     bool    rebootRequired;
-    bool    readOnly;
     QList<QPair<QString, QString> > values;
     QList<QPair<QString, QString> > bitmask;
 };
@@ -56,7 +57,7 @@ class APMParameterMetaData : public QObject
 public:
     APMParameterMetaData(void);
 
-    FactMetaData* getMetaDataForFact(const QString& name, MAV_TYPE vehicleType, FactMetaData::ValueType_t type);
+    void addMetaDataToFact(Fact* fact, MAV_TYPE vehicleType);
     void loadParameterFactMetaDataFile(const QString& metaDataFile);
 
     static void getParameterMetaDataVersionInfo(const QString& metaDataFile, int& majorVersion, int& minorVersion);
@@ -81,9 +82,8 @@ private:
     QString mavTypeToString(MAV_TYPE vehicleTypeEnum);
     QString _groupFromParameterName(const QString& name);
 
-    bool                                            _parameterMetaDataLoaded        = false;    ///< true: parameter meta data already loaded
-    // FIXME: metadata is vehicle type specific now
-    QMap<QString, ParameterNametoFactMetaDataMap>   _vehicleTypeToParametersMap;                ///< Maps from a vehicle type to paramametertoFactMeta map>
-
-    static constexpr const char* kInvalidConverstion = "Internal Error: No support for string parameters";
+    bool _parameterMetaDataLoaded;   ///< true: parameter meta data already loaded
+    QMap<QString, ParameterNametoFactMetaDataMap> _vehicleTypeToParametersMap; ///< Maps from a vehicle type to paramametertoFactMeta map>
 };
+
+#endif

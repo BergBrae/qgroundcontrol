@@ -7,15 +7,16 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+import QtQuick              2.3
+import QtQuick.Controls     1.2
+import QtGraphicalEffects   1.0
+import QtQuick.Layouts      1.2
 
-import QGroundControl.FactSystem
-import QGroundControl.FactControls
-import QGroundControl.Palette
-import QGroundControl.Controls
-import QGroundControl.ScreenTools
+import QGroundControl.FactSystem    1.0
+import QGroundControl.FactControls  1.0
+import QGroundControl.Palette       1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.ScreenTools   1.0
 
 SetupPage {
     id:             safetyPage
@@ -144,7 +145,7 @@ SetupPage {
 
                 QGCLabel {
                     text:       qsTr("Battery1 Failsafe Triggers")
-                    font.bold:   true
+                    font.family: ScreenTools.demiboldFontFamily
                 }
 
                 Rectangle {
@@ -178,7 +179,7 @@ SetupPage {
 
                 QGCLabel {
                     text:       qsTr("Battery2 Failsafe Triggers")
-                    font.bold:   true
+                    font.family: ScreenTools.demiboldFontFamily
                 }
 
                 Rectangle {
@@ -217,7 +218,7 @@ SetupPage {
 
                     QGCLabel {
                         text:       qsTr("Failsafe Triggers")
-                        font.bold:   true
+                        font.family: ScreenTools.demiboldFontFamily
                     }
 
                     Rectangle {
@@ -276,7 +277,7 @@ SetupPage {
                     QGCLabel {
                         id:         failsafeLabel
                         text:       qsTr("Failsafe Triggers")
-                        font.bold:   true
+                        font.family: ScreenTools.demiboldFontFamily
                     }
 
                     Rectangle {
@@ -342,7 +343,7 @@ SetupPage {
 
                     QGCLabel {
                         text:       qsTr("General Failsafe Triggers")
-                        font.bold:   true
+                        font.family: ScreenTools.demiboldFontFamily
                     }
 
                     Rectangle {
@@ -376,7 +377,7 @@ SetupPage {
                                     currentIndex:       _failsafeThrEnable.value
                                     Layout.fillWidth:   true
 
-                                    onActivated: (index) => { _failsafeThrEnable.value = index }
+                                    onActivated: _failsafeThrEnable.value = index
                                 }
 
                                 QGCLabel { text: qsTr("PWM threshold:") }
@@ -408,116 +409,121 @@ SetupPage {
                     property Fact _fenceRadius: controller.getParameterFact(-1, "FENCE_RADIUS")
                     property Fact _fenceType:   controller.getParameterFact(-1, "FENCE_TYPE")
 
-                    readonly property int _maxAltitudeFenceBitMask: 1
-                    readonly property int _circleFenceBitMask:      2
-                    readonly property int _polygonFenceBitMask:     4
-
                     QGCLabel {
+                        id:             geoFenceLabel
                         text:           qsTr("GeoFence")
-                        font.bold:      true
+                        font.family:    ScreenTools.demiboldFontFamily
                     }
 
                     Rectangle {
-                        width:  mainLayout.width + (_margins * 2)
-                        height: mainLayout.height + (_margins * 2)
+                        id:     geoFenceSettings
+                        width:  fenceAltMaxField.x + fenceAltMaxField.width + _margins
+                        height: fenceAltMaxField.y + fenceAltMaxField.height + _margins
                         color:  ggcPal.windowShade
 
-                        ColumnLayout {
-                            id:         mainLayout
-                            x:          _margins
-                            y:          _margins
-                            spacing:    ScreenTools.defaultFontPixellHeight / 2
+                        QGCCheckBox {
+                            id:                 circleGeo
+                            anchors.margins:    _margins
+                            anchors.left:       parent.left
+                            anchors.top:        parent.top
+                            text:               qsTr("Circle GeoFence enabled")
+                            checked:            _fenceEnable.value != 0 && _fenceType.value & 2
 
-                            FactCheckBox {
-                                id:     enabledCheckBox
-                                text:   qsTr("Enabled")
-                                fact:   _fenceEnable
-                            }
-
-                            GridLayout {
-                                columns:    2
-                                enabled:    enabledCheckBox.checked
-
-                                QGCCheckBox {
-                                    text:       qsTr("Maximum Altitude")
-                                    checked:    _fenceType.rawValue & _maxAltitudeFenceBitMask
-
-                                    onClicked: {
-                                        if (checked) {
-                                            _fenceType.rawValue |= _maxAltitudeFenceBitMask
-                                        } else {
-                                            _fenceType.value &= ~_maxAltitudeFenceBitMask
-                                        }
+                            onClicked: {
+                                if (checked) {
+                                    if (_fenceEnable.value == 1) {
+                                        _fenceType.value |= 2
+                                    } else {
+                                        _fenceEnable.value = 1
+                                        _fenceType.value = 2
                                     }
-                                }
-
-                                FactTextField {
-                                    fact: _fenceAltMax
-                                }
-
-                                QGCCheckBox {
-                                    text:       qsTr("Circle centered on Home")
-                                    checked:    _fenceType.rawValue & _circleFenceBitMask
-
-                                    onClicked: {
-                                        if (checked) {
-                                            _fenceType.rawValue |= _circleFenceBitMask
-                                        } else {
-                                            _fenceType.value &= ~_circleFenceBitMask
-                                        }
-                                    }
-                                }
-
-                                FactTextField {
-                                    fact:       _fenceRadius
-                                    showUnits:  true
-                                }
-
-                                QGCCheckBox {
-                                    text:       qsTr("Inclusion/Exclusion Circles+Polygons")
-                                    checked:    _fenceType.rawValue & _polygonFenceBitMask
-
-                                    onClicked: {
-                                        if (checked) {
-                                            _fenceType.rawValue |= _polygonFenceBitMask
-                                        } else {
-                                            _fenceType.value &= ~_polygonFenceBitMask
-                                        }
-                                    }
-                                }
-
-                                Item {
-                                    height: 1
-                                    width:  1
-                                }
-                            } // GridLayout
-
-                            Item {
-                                height: 1
-                                width:  1
-                            }
-
-                            GridLayout {
-                                columns: 2
-                                enabled: enabledCheckBox.checked
-
-                                QGCLabel {
-                                    text: qsTr("Breach action")
-                                }
-
-                                FactComboBox {
-                                    sizeToContents: true
-                                    fact:           _fenceAction
-                                }
-
-                                QGCLabel {
-                                    text: qsTr("Fence margin")
-                                }
-
-                                FactTextField {
-                                    fact: _fenceMargin
+                                } else if (altitudeGeo.checked) {
+                                    _fenceType.value &= ~2
+                                } else {
+                                    _fenceEnable.value = 0
+                                    _fenceType.value = 0
                                 }
                             }
+                        }
+
+                        QGCCheckBox {
+                            id:                 altitudeGeo
+                            anchors.topMargin:  _margins / 2
+                            anchors.left:       circleGeo.left
+                            anchors.top:        circleGeo.bottom
+                            text:               qsTr("Altitude GeoFence enabled")
+                            checked:            _fenceEnable.value != 0 && _fenceType.value & 1
+
+                            onClicked: {
+                                if (checked) {
+                                    if (_fenceEnable.value == 1) {
+                                        _fenceType.value |= 1
+                                    } else {
+                                        _fenceEnable.value = 1
+                                        _fenceType.value = 1
+                                    }
+                                } else if (circleGeo.checked) {
+                                    _fenceType.value &= ~1
+                                } else {
+                                    _fenceEnable.value = 0
+                                    _fenceType.value = 0
+                                }
+                            }
+                        }
+
+                        QGCRadioButton {
+                            id:                 geoReportRadio
+                            anchors.margins:    _margins
+                            anchors.left:       parent.left
+                            anchors.top:        altitudeGeo.bottom
+                            text:               qsTr("Report only")
+                            checked:            _fenceAction.value == 0
+
+                            onClicked: _fenceAction.value = 0
+                        }
+
+                        QGCRadioButton {
+                            id:                 geoRTLRadio
+                            anchors.topMargin:  _margins / 2
+                            anchors.left:       circleGeo.left
+                            anchors.top:        geoReportRadio.bottom
+                            text:               qsTr("RTL or Land")
+                            checked:            _fenceAction.value == 1
+
+                            onClicked: _fenceAction.value = 1
+                        }
+
+                        QGCLabel {
+                            id:                 fenceRadiusLabel
+                            anchors.left:       circleGeo.left
+                            anchors.baseline:   fenceRadiusField.baseline
+                            text:               qsTr("Max radius:")
+                        }
+
+                        FactTextField {
+                            id:                 fenceRadiusField
+                            anchors.topMargin:  _margins
+                            anchors.left:       fenceAltMaxField.left
+                            anchors.top:        geoRTLRadio.bottom
+                            fact:               _fenceRadius
+                            showUnits:          true
+                        }
+
+                        QGCLabel {
+                            id:                 fenceAltMaxLabel
+                            anchors.left:       circleGeo.left
+                            anchors.baseline:   fenceAltMaxField.baseline
+                            text:               qsTr("Max altitude:")
+                        }
+
+                        FactTextField {
+                            id:                 fenceAltMaxField
+                            anchors.topMargin:  _margins / 2
+                            anchors.leftMargin: _margins
+                            anchors.left:       fenceAltMaxLabel.right
+                            anchors.top:        fenceRadiusField.bottom
+                            fact:               _fenceAltMax
+                            showUnits:          true
                         }
                     } // Rectangle - GeoFence Settings
                 } // Column - GeoFence Settings
@@ -541,7 +547,7 @@ SetupPage {
                     QGCLabel {
                         id:             rtlLabel
                         text:           qsTr("Return to Launch")
-                        font.bold:      true
+                        font.family:    ScreenTools.demiboldFontFamily
                     }
 
                     Rectangle {
@@ -550,19 +556,25 @@ SetupPage {
                         height: landSpeedField.y + landSpeedField.height + _margins
                         color:  ggcPal.windowShade
 
-                        QGCColoredImage {
+                        Image {
                             id:                 icon
-                            visible:            _showIcon
                             anchors.margins:    _margins
                             anchors.left:       parent.left
                             anchors.top:        parent.top
                             height:             ScreenTools.defaultFontPixelWidth * 20
                             width:              ScreenTools.defaultFontPixelWidth * 20
-                            color:              ggcPal.text
                             sourceSize.width:   width
                             mipmap:             true
                             fillMode:           Image.PreserveAspectFit
+                            visible:            false
                             source:             "/qmlimages/ReturnToHomeAltitude.svg"
+                        }
+
+                        ColorOverlay {
+                            anchors.fill:   icon
+                            source:         icon
+                            color:          ggcPal.text
+                            visible:        _showIcon
                         }
 
                         QGCRadioButton {
@@ -664,7 +676,7 @@ SetupPage {
 
                     QGCLabel {
                         text:           qsTr("Return to Launch")
-                        font.bold:      true
+                        font.family:    ScreenTools.demiboldFontFamily
                     }
 
                     Rectangle {
@@ -716,7 +728,7 @@ SetupPage {
 
                 QGCLabel {
                     text:           qsTr("Arming Checks")
-                    font.bold:      true
+                    font.family:    ScreenTools.demiboldFontFamily
                 }
 
                 Rectangle {

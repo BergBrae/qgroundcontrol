@@ -1,29 +1,15 @@
-find_package(Qt6 REQUIRED COMPONENTS Core Location Network Positioning)
 
-qt_add_library(Terrain STATIC
-    TerrainQuery.cc
-    TerrainQuery.h
-    TerrainQueryAirMap.cc
-    TerrainQueryAirMap.h
-    TerrainQueryInterface.cc
-    TerrainQueryInterface.h
-    TerrainTile.cc
-    TerrainTile.h
-    TerrainTileCopernicus.cc
-    TerrainTileCopernicus.h
-    TerrainTileManager.cc
-    TerrainTileManager.h
+add_library(Terrain
+	TerrainQuery.cc
 )
 
 target_link_libraries(Terrain
-    PRIVATE
-        Qt6::LocationPrivate
-        QGCLocation
-        Utilities
-    PUBLIC
-        Qt6::Core
-        Qt6::Network
-        Qt6::Positioning
+	PRIVATE
+		qgc
 )
 
-target_include_directories(Terrain PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(Terrain
+	PUBLIC
+		${CMAKE_CURRENT_SOURCE_DIR}
+	)
+

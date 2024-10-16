@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,18 +9,19 @@
 
 
 #include "APMFlightModesComponentController.h"
-#include "Fact.h"
-#include "Vehicle.h"
-#include "ParameterManager.h"
+#include "QGCMAVLink.h"
 
-#include <QtCore/QVariant>
-#include <QtQml/QQmlEngine>
+#include <QVariant>
+#include <QQmlProperty>
 
 bool APMFlightModesComponentController::_typeRegistered = false;
 
+const char* APMFlightModesComponentController::_simpleParamName =       "SIMPLE";
+const char* APMFlightModesComponentController::_superSimpleParamName =  "SUPER_SIMPLE";
+
 APMFlightModesComponentController::APMFlightModesComponentController(void)
     : _activeFlightMode     (0)
-    , _channelCount         (QGCMAVLink::maxRcChannels)
+    , _channelCount         (Vehicle::cMaxRcChannels)
     , _simpleMode           (SimpleModeStandard)
     , _simpleModeFact       (parameterExists(-1, _simpleParamName)      ? getParameterFact(-1, _simpleParamName) : nullptr)
     , _superSimpleModeFact  (parameterExists(-1, _superSimpleParamName) ? getParameterFact(-1, _superSimpleParamName) : nullptr)
@@ -62,7 +63,7 @@ APMFlightModesComponentController::APMFlightModesComponentController(void)
     for (int i=1; i<7; i++) {
         usedParams << QStringLiteral("%1%2").arg(_modeParamPrefix).arg(i);
     }
-    if (!_allParametersExists(ParameterManager::defaultComponentId, usedParams)) {
+    if (!_allParametersExists(FactSystem::defaultComponentId, usedParams)) {
         return;
     }
 
@@ -74,12 +75,12 @@ APMFlightModesComponentController::APMFlightModesComponentController(void)
 }
 
 /// Connected to Vehicle::rcChannelsChanged signal
-void APMFlightModesComponentController::_rcChannelsChanged(int channelCount, int pwmValues[QGCMAVLink::maxRcChannels])
+void APMFlightModesComponentController::_rcChannelsChanged(int channelCount, int pwmValues[Vehicle::cMaxRcChannels])
 {
     int flightModeChannel = 4;
 
-    if (parameterExists(ParameterManager::defaultComponentId, _modeChannelParam)) {
-        flightModeChannel = getParameterFact(ParameterManager::defaultComponentId, _modeChannelParam)->rawValue().toInt() - 1;
+    if (parameterExists(FactSystem::defaultComponentId, _modeChannelParam)) {
+        flightModeChannel = getParameterFact(FactSystem::defaultComponentId, _modeChannelParam)->rawValue().toInt() - 1;
     }
 
     if (flightModeChannel >= channelCount) {
@@ -106,7 +107,7 @@ void APMFlightModesComponentController::_rcChannelsChanged(int channelCount, int
 
     for (int i=0; i<_cChannelOptions; i++) {
         _rgChannelOptionEnabled[i] = QVariant(false);
-        channelValue = pwmValues[i+5];
+        channelValue = pwmValues[i+6];
         if (channelValue > 1800) {
             _rgChannelOptionEnabled[i] = QVariant(true);
         }

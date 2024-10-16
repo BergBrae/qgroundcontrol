@@ -14,7 +14,7 @@
  *   @author Gus Grubba <gus@auterion.com>
  */
 
-import QtQuick
+import QtQuick 2.3
 
 Item {
     id: root

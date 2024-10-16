@@ -1,74 +1,53 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
  *
  ****************************************************************************/
 
-#include "QGroundControlQmlGlobal.h"
-#include "QGCApplication.h"
-#include "LinkManager.h"
-#include "MAVLinkProtocol.h"
-#include "ElevationMapProvider.h"
-#include "FirmwarePluginManager.h"
-#include "AppSettings.h"
-#include "PositionManager.h"
-#include "QGCMapEngineManager.h"
-#include "ADSBVehicleManager.h"
-#ifndef NO_SERIAL_LINK
-#include "GPSManager.h"
-#endif
-#include "QGCPalette.h"
-#ifdef QT_DEBUG
-#include "MockLink.h"
-#endif
 
-#include <QtCore/QSettings>
-#include <QtCore/QLineF>
+/// @file
+///     @author Don Gagne <don@thegagnes.com>
+
+#include "QGroundControlQmlGlobal.h"
+
+#include <QSettings>
+#include <QLineF>
+#include <QPointF>
+
+static const char* kQmlGlobalKeyName = "QGCQml";
+
+const char* QGroundControlQmlGlobal::_flightMapPositionSettingsGroup =          "FlightMapPosition";
+const char* QGroundControlQmlGlobal::_flightMapPositionLatitudeSettingsKey =    "Latitude";
+const char* QGroundControlQmlGlobal::_flightMapPositionLongitudeSettingsKey =   "Longitude";
+const char* QGroundControlQmlGlobal::_flightMapZoomSettingsKey =                "FlightMapZoom";
 
 QGeoCoordinate   QGroundControlQmlGlobal::_coord = QGeoCoordinate(0.0,0.0);
 double           QGroundControlQmlGlobal::_zoom = 2;
 
 QGroundControlQmlGlobal::QGroundControlQmlGlobal(QGCApplication* app, QGCToolbox* toolbox)
-    : QGCTool(app, toolbox)
-    , _mapEngineManager(QGCMapEngineManager::instance())
-    , _adsbVehicleManager(ADSBVehicleManager::instance())
+    : QGCTool               (app, toolbox)
 {
     // We clear the parent on this object since we run into shutdown problems caused by hybrid qml app. Instead we let it leak on shutdown.
-    // setParent(nullptr);
-
+    setParent(nullptr);
     // Load last coordinates and zoom from config file
     QSettings settings;
     settings.beginGroup(_flightMapPositionSettingsGroup);
     _coord.setLatitude(settings.value(_flightMapPositionLatitudeSettingsKey,    _coord.latitude()).toDouble());
     _coord.setLongitude(settings.value(_flightMapPositionLongitudeSettingsKey,  _coord.longitude()).toDouble());
     _zoom = settings.value(_flightMapZoomSettingsKey, _zoom).toDouble();
-    _flightMapPositionSettledTimer.setSingleShot(true);
-    _flightMapPositionSettledTimer.setInterval(1000);
-    connect(&_flightMapPositionSettledTimer, &QTimer::timeout, [](){
-        // When they settle, save flightMapPosition and Zoom to the config file
-        QSettings settings;
-        settings.beginGroup(_flightMapPositionSettingsGroup);
-        settings.setValue(_flightMapPositionLatitudeSettingsKey, _coord.latitude());
-        settings.setValue(_flightMapPositionLongitudeSettingsKey, _coord.longitude());
-        settings.setValue(_flightMapZoomSettingsKey, _zoom);
-    });
-    connect(this, &QGroundControlQmlGlobal::flightMapPositionChanged, this, [this](QGeoCoordinate){
-        if (!_flightMapPositionSettledTimer.isActive()) {
-            _flightMapPositionSettledTimer.start();
-        }
-    });
-    connect(this, &QGroundControlQmlGlobal::flightMapZoomChanged, this, [this](double){
-        if (!_flightMapPositionSettledTimer.isActive()) {
-            _flightMapPositionSettledTimer.start();
-        }
-    });
 }
 
 QGroundControlQmlGlobal::~QGroundControlQmlGlobal()
 {
+    // Save last coordinates and zoom to config file
+    QSettings settings;
+    settings.beginGroup(_flightMapPositionSettingsGroup);
+    settings.setValue(_flightMapPositionLatitudeSettingsKey, _coord.latitude());
+    settings.setValue(_flightMapPositionLongitudeSettingsKey, _coord.longitude());
+    settings.setValue(_flightMapZoomSettingsKey, _zoom);
 }
 
 void QGroundControlQmlGlobal::setToolbox(QGCToolbox* toolbox)
@@ -77,6 +56,7 @@ void QGroundControlQmlGlobal::setToolbox(QGCToolbox* toolbox)
 
     _linkManager            = toolbox->linkManager();
     _multiVehicleManager    = toolbox->multiVehicleManager();
+    _mapEngineManager       = toolbox->mapEngineManager();
     _qgcPositionManager     = toolbox->qgcPositionManager();
     _missionCommandTree     = toolbox->missionCommandTree();
     _videoManager           = toolbox->videoManager();
@@ -84,15 +64,17 @@ void QGroundControlQmlGlobal::setToolbox(QGCToolbox* toolbox)
     _corePlugin             = toolbox->corePlugin();
     _firmwarePluginManager  = toolbox->firmwarePluginManager();
     _settingsManager        = toolbox->settingsManager();
-#ifndef NO_SERIAL_LINK
-    _gpsRtkFactGroup        = toolbox->gpsManager()->gpsRtkFactGroup();
+    _gpsRtkFactGroup        = qgcApp()->gpsRtkFactGroup();
+    _airspaceManager        = toolbox->airspaceManager();
+    _adsbVehicleManager     = toolbox->adsbVehicleManager();
+#if defined(QGC_ENABLE_PAIRING)
+    _pairingManager         = toolbox->pairingManager();
 #endif
-    _globalPalette          = new QGCPalette(this);
-#ifndef QGC_AIRLINK_DISABLED
-    _airlinkManager         = toolbox->airlinkManager();
+#if defined(QGC_GST_TAISYNC_ENABLED)
+    _taisyncManager         = toolbox->taisyncManager();
 #endif
-#ifdef QGC_UTM_ADAPTER
-    _utmspManager            = toolbox->utmspManager();
+#if defined(QGC_GST_MICROHARD_ENABLED)
+    _microhardManager       = toolbox->microhardManager();
 #endif
 }
 
@@ -181,13 +163,14 @@ void QGroundControlQmlGlobal::startAPMArduRoverMockLink(bool sendStatusText)
 void QGroundControlQmlGlobal::stopOneMockLink(void)
 {
 #ifdef QT_DEBUG
-    QList<SharedLinkInterfacePtr> sharedLinks = _toolbox->linkManager()->links();
+    LinkManager* linkManager = qgcApp()->toolbox()->linkManager();
 
-    for (int i=0; i<sharedLinks.count(); i++) {
-        LinkInterface* link = sharedLinks[i].get();
+    for (int i=0; i<linkManager->links().count(); i++) {
+        LinkInterface* link = linkManager->links()[i];
         MockLink* mockLink = qobject_cast<MockLink*>(link);
+
         if (mockLink) {
-            mockLink->disconnect();
+            linkManager->disconnectLink(mockLink);
             return;
         }
     }
@@ -196,47 +179,48 @@ void QGroundControlQmlGlobal::stopOneMockLink(void)
 
 void QGroundControlQmlGlobal::setIsVersionCheckEnabled(bool enable)
 {
-    _toolbox->mavlinkProtocol()->enableVersionCheck(enable);
+    qgcApp()->toolbox()->mavlinkProtocol()->enableVersionCheck(enable);
     emit isVersionCheckEnabledChanged(enable);
 }
 
 void QGroundControlQmlGlobal::setMavlinkSystemID(int id)
 {
-    _toolbox->mavlinkProtocol()->setSystemId(id);
+    qgcApp()->toolbox()->mavlinkProtocol()->setSystemId(id);
     emit mavlinkSystemIDChanged(id);
 }
 
-bool QGroundControlQmlGlobal::singleFirmwareSupport(void)
+int QGroundControlQmlGlobal::supportedFirmwareCount()
 {
-    return _firmwarePluginManager->supportedFirmwareClasses().count() == 1;
+    return _firmwarePluginManager->supportedFirmwareTypes().count();
 }
 
-bool QGroundControlQmlGlobal::singleVehicleSupport(void)
+int QGroundControlQmlGlobal::supportedVehicleCount()
 {
-    if (singleFirmwareSupport()) {
-        return _firmwarePluginManager->supportedVehicleClasses(_firmwarePluginManager->supportedFirmwareClasses()[0]).count() == 1;
+    int count = 0;
+    QList<MAV_AUTOPILOT> list = _firmwarePluginManager->supportedFirmwareTypes();
+    foreach(auto firmware, list) {
+        if(firmware != MAV_AUTOPILOT_GENERIC) {
+            count += _firmwarePluginManager->supportedVehicleTypes(firmware).count();
+        }
     }
-
-    return false;
+    return count;
 }
 
 bool QGroundControlQmlGlobal::px4ProFirmwareSupported()
 {
-    return _firmwarePluginManager->supportedFirmwareClasses().contains(QGCMAVLink::FirmwareClassPX4);
+    return _firmwarePluginManager->supportedFirmwareTypes().contains(MAV_AUTOPILOT_PX4);
 }
 
 bool QGroundControlQmlGlobal::apmFirmwareSupported()
 {
-    return _firmwarePluginManager->supportedFirmwareClasses().contains(QGCMAVLink::FirmwareClassArduPilot);
+    return _firmwarePluginManager->supportedFirmwareTypes().contains(MAV_AUTOPILOT_ARDUPILOTMEGA);
 }
 
 bool QGroundControlQmlGlobal::linesIntersect(QPointF line1A, QPointF line1B, QPointF line2A, QPointF line2B)
 {
     QPointF intersectPoint;
 
-    auto intersect = QLineF(line1A, line1B).intersects(QLineF(line2A, line2B), &intersectPoint);
-
-    return  intersect == QLineF::BoundedIntersection &&
+    return QLineF(line1A, line1B).intersect(QLineF(line2A, line2B), &intersectPoint) == QLineF::BoundedIntersection &&
             intersectPoint != line1A && intersectPoint != line1B;
 }
 
@@ -253,6 +237,7 @@ void QGroundControlQmlGlobal::setFlightMapPosition(QGeoCoordinate& coordinate)
     if (coordinate != flightMapPosition()) {
         _coord.setLatitude(coordinate.latitude());
         _coord.setLongitude(coordinate.longitude());
+
         emit flightMapPositionChanged(coordinate);
     }
 }
@@ -267,108 +252,11 @@ void QGroundControlQmlGlobal::setFlightMapZoom(double zoom)
 
 QString QGroundControlQmlGlobal::qgcVersion(void) const
 {
-    QString versionStr = _app->applicationVersion();
-    if(QSysInfo::buildAbi().contains("32"))
-    {
-        versionStr += QStringLiteral(" %1").arg(tr("32 bit"));
-    }
-    else if(QSysInfo::buildAbi().contains("64"))
-    {
-        versionStr += QStringLiteral(" %1").arg(tr("64 bit"));
-    }
+    QString versionStr = qgcApp()->applicationVersion();
+#ifdef __androidArm32__
+    versionStr += QStringLiteral(" %1").arg(tr("32 bit"));
+#elif __androidArm64__
+    versionStr += QStringLiteral(" %1").arg(tr("64 bit"));
+#endif
     return versionStr;
-}
-
-QString QGroundControlQmlGlobal::altitudeModeExtraUnits(AltMode altMode)
-{
-    switch (altMode) {
-    case AltitudeModeNone:
-        return QString();
-    case AltitudeModeRelative:
-        // Showing (Rel) all the time ends up being too noisy
-        return QString();
-    case AltitudeModeAbsolute:
-        return tr("(AMSL)");
-    case AltitudeModeCalcAboveTerrain:
-        return tr("(CalcT)");
-    case AltitudeModeTerrainFrame:
-        return tr("(TerrF)");
-    case AltitudeModeMixed:
-        qWarning() << "Internal Error: QGroundControlQmlGlobal::altitudeModeExtraUnits called with altMode == AltitudeModeMixed";
-        return QString();
-    }
-
-    // Should never get here but makes some compilers happy
-    return QString();
-}
-
-QString QGroundControlQmlGlobal::altitudeModeShortDescription(AltMode altMode)
-{
-    switch (altMode) {
-    case AltitudeModeNone:
-        return QString();
-    case AltitudeModeRelative:
-        return tr("Relative To Launch");
-    case AltitudeModeAbsolute:
-        return tr("AMSL");
-    case AltitudeModeCalcAboveTerrain:
-        return tr("Calc Above Terrain");
-    case AltitudeModeTerrainFrame:
-        return tr("Terrain Frame");
-    case AltitudeModeMixed:
-        return tr("Mixed Modes");
-    }
-
-    // Should never get here but makes some compilers happy
-    return QString();
-}
-
-bool QGroundControlQmlGlobal::isVersionCheckEnabled()
-{
-    return _toolbox->mavlinkProtocol()->versionCheckEnabled();
-}
-
-int QGroundControlQmlGlobal::mavlinkSystemID()
-{
-    return _toolbox->mavlinkProtocol()->getSystemId();
-}
-
-QString QGroundControlQmlGlobal::elevationProviderName()
-{
-    return CopernicusElevationProvider::kProviderKey;
-}
-
-QString QGroundControlQmlGlobal::elevationProviderNotice()
-{
-    return CopernicusElevationProvider::kProviderNotice;
-}
-
-QString QGroundControlQmlGlobal::parameterFileExtension() const
-{
-    return AppSettings::parameterFileExtension;
-}
-
-QString QGroundControlQmlGlobal::missionFileExtension() const
-{
-    return AppSettings::missionFileExtension;
-}
-
-QString QGroundControlQmlGlobal::telemetryFileExtension() const
-{
-    return AppSettings::telemetryFileExtension;
-}
-
-QString QGroundControlQmlGlobal::appName()
-{
-    return _app->applicationName();
-}
-
-void QGroundControlQmlGlobal::deleteAllSettingsNextBoot()
-{
-    _app->deleteAllSettingsNextBoot();
-}
-
-void QGroundControlQmlGlobal::clearDeleteAllSettingsNextBoot()
-{
-    _app->clearDeleteAllSettingsNextBoot();
 }

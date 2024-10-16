@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -8,7 +8,8 @@
  ****************************************************************************/
 
 
-#pragma once
+#ifndef GENERICAUTOPILOT_H
+#define GENERICAUTOPILOT_H
 
 #include "AutoPilotPlugin.h"
 
@@ -28,3 +29,5 @@ public:
     const QVariantList& vehicleComponents(void) final;
     QString prerequisiteSetup(VehicleComponent* component) const final;
 };
+
+#endif

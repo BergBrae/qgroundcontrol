@@ -7,13 +7,12 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtQuick.Controls
+import QtQuick          2.3
+import QtQuick.Controls 2.4
 
-import QGroundControl
-import QGroundControl.Controls
-import QGroundControl.Palette
-import QGroundControl.ScreenTools
+import QGroundControl.Controls      1.0
+import QGroundControl.Palette       1.0
+import QGroundControl.ScreenTools   1.0
 
 // Important Note: Toolbar buttons must manage their checked state manually in order to support
 // view switch prevention. This means they can't be checkable or autoExclusive.
@@ -32,10 +31,8 @@ Button {
     onCheckedChanged: checkable = false
 
     background: Rectangle {
-        anchors.fill:   parent
-        color:          button.checked ? qgcPal.buttonHighlight : Qt.rgba(0,0,0,0)
-        border.color:   "red"
-        border.width:   QGroundControl.corePlugin.showTouchAreas ? 3 : 0
+        anchors.fill: parent
+        color:  logo ? qgcPal.brandingPurple : (button.checked ? qgcPal.buttonHighlight : Qt.rgba(0,0,0,0))
     }
 
     contentItem: Row {
@@ -47,7 +44,7 @@ Button {
             width:                  height
             sourceSize.height:      parent.height
             fillMode:               Image.PreserveAspectFit
-            color:                  logo ? "transparent" : (button.checked ? qgcPal.buttonHighlightText : qgcPal.buttonText)
+            color:                  logo ? "white" : (button.checked ? qgcPal.buttonHighlightText : qgcPal.buttonText)
             source:                 button.icon.source
             anchors.verticalCenter: parent.verticalCenter
         }

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,7 +9,6 @@
 
 #include "ArduRoverFirmwarePlugin.h"
 #include "QGCApplication.h"
-#include "Vehicle.h"
 
 bool ArduRoverFirmwarePlugin::_remapParamNameIntialized = false;
 FirmwarePlugin::remapParamNameMajorVersionMap_t ArduRoverFirmwarePlugin::_remapParamName;
@@ -20,14 +19,14 @@ APMRoverMode::APMRoverMode(uint32_t mode, bool settable)
     setEnumToStringMapping({
         {MANUAL,         "Manual"},
         {ACRO,           "Acro"},
-        {LEARNING,       "Learning"},
         {STEERING,       "Steering"},
         {HOLD,           "Hold"},
         {LOITER,         "Loiter"},
+#if 0
+    // Follow me not ready for Stable
         {FOLLOW,         "Follow"},
+#endif
         {SIMPLE,         "Simple"},
-        {DOCK,           "Dock"},
-        {CIRCLE,         "Circle"},
         {AUTO,           "Auto"},
         {RTL,            "RTL"},
         {SMART_RTL,      "Smart RTL"},
@@ -41,14 +40,14 @@ ArduRoverFirmwarePlugin::ArduRoverFirmwarePlugin(void)
     setSupportedModes({
         APMRoverMode(APMRoverMode::MANUAL       ,true),
         APMRoverMode(APMRoverMode::ACRO         ,true),
-        APMRoverMode(APMRoverMode::LEARNING     ,false),
         APMRoverMode(APMRoverMode::STEERING     ,true),
         APMRoverMode(APMRoverMode::HOLD         ,true),
         APMRoverMode(APMRoverMode::LOITER       ,true),
+#if 0
+    // Follow me not ready for Stable
         APMRoverMode(APMRoverMode::FOLLOW       ,true),
+#endif
         APMRoverMode(APMRoverMode::SIMPLE       ,true),
-        APMRoverMode(APMRoverMode::DOCK         ,true),
-        APMRoverMode(APMRoverMode::CIRCLE       ,true),
         APMRoverMode(APMRoverMode::AUTO         ,true),
         APMRoverMode(APMRoverMode::RTL          ,true),
         APMRoverMode(APMRoverMode::SMART_RTL    ,true),
@@ -72,12 +71,23 @@ int ArduRoverFirmwarePlugin::remapParamNameHigestMinorVersionNumber(int majorVer
     return majorVersionNumber == 3 ? 5 : Vehicle::versionNotSetValue;
 }
 
-void ArduRoverFirmwarePlugin::guidedModeChangeAltitude(Vehicle* /*vehicle*/, double /*altitudeChange*/, bool /*pauseVehicle*/)
+void ArduRoverFirmwarePlugin::guidedModeChangeAltitude(Vehicle* vehicle, double altitudeChange)
 {
-    qgcApp()->showAppMessage(QStringLiteral("Change altitude not supported."));
+    Q_UNUSED(vehicle);
+    Q_UNUSED(altitudeChange);
+
+    qgcApp()->showMessage(QStringLiteral("Change altitude not supported."));
 }
 
 bool ArduRoverFirmwarePlugin::supportsNegativeThrust(Vehicle* /*vehicle*/)
 {
     return true;
 }
+
+#if 0
+    // Follow me not ready for Stable
+void ArduRoverFirmwarePlugin::sendGCSMotionReport(Vehicle* vehicle, FollowMe::GCSMotionReport& motionReport, uint8_t estimatationCapabilities)
+{
+    _sendGCSMotionReport(vehicle, motionReport, estimatationCapabilities);
+}
+#endif

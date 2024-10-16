@@ -14,8 +14,8 @@
  *   @author Gus Grubba <gus@auterion.com>
  */
 
-import QtQuick
-import QGroundControl.ScreenTools
+import QtQuick 2.3
+import QGroundControl.ScreenTools 1.0
 
 Item {
     id: root

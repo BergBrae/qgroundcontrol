@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -8,70 +8,61 @@
  ****************************************************************************/
 
 #include "ADSBVehicle.h"
-#include "QGC.h"
 #include "QGCLoggingCategory.h"
 
-#include <QtCore/QtNumeric>
+#include <QDebug>
+#include <QtMath>
 
-QGC_LOGGING_CATEGORY(ADSBVehicleLog, "qgc.adsb.adsbvehicle")
-
-ADSBVehicle::ADSBVehicle(const ADSB::VehicleInfo_t &vehicleInfo, QObject *parent)
-    : QObject(parent)
+ADSBVehicle::ADSBVehicle(const VehicleInfo_t& vehicleInfo, QObject* parent)
+    : QObject       (parent)
+    , _icaoAddress  (vehicleInfo.icaoAddress)
+    , _altitude     (qQNaN())
+    , _heading      (qQNaN())
+    , _alert        (false)
 {
-    _info.icaoAddress = vehicleInfo.icaoAddress;
     update(vehicleInfo);
-
-    // qCDebug(ADSBTCPLinkLog) << Q_FUNC_INFO << this;
 }
 
-ADSBVehicle::~ADSBVehicle()
+void ADSBVehicle::update(const VehicleInfo_t& vehicleInfo)
 {
-    // qCDebug(ADSBTCPLinkLog) << Q_FUNC_INFO << this;
-}
-
-void ADSBVehicle::update(const ADSB::VehicleInfo_t &vehicleInfo)
-{
-    if (vehicleInfo.icaoAddress != icaoAddress()) {
-        qCWarning(ADSBVehicleLog) << "ICAO address mismatch expected:" << icaoAddress() << "actual:" << vehicleInfo.icaoAddress;
+    if (_icaoAddress != vehicleInfo.icaoAddress) {
+        qCWarning(ADSBVehicleManagerLog) << "ICAO address mismatch expected:actual" << _icaoAddress << vehicleInfo.icaoAddress;
         return;
     }
-
-    qCDebug(ADSBVehicleLog) << "Updating" << QStringLiteral("%1 Flags: %2").arg(vehicleInfo.icaoAddress, 0, 16).arg(vehicleInfo.availableFlags, 0, 2);
-
-    if (vehicleInfo.availableFlags & ADSB::CallsignAvailable) {
-        if (vehicleInfo.callsign != callsign()) {
-            _info.callsign = vehicleInfo.callsign;
+    if (vehicleInfo.availableFlags & CallsignAvailable) {
+        if (vehicleInfo.callsign != _callsign) {
+            _callsign = vehicleInfo.callsign;
             emit callsignChanged();
         }
     }
-
-    if (vehicleInfo.availableFlags & ADSB::LocationAvailable) {
-        if (vehicleInfo.location != coordinate()) {
-            _info.location = vehicleInfo.location;
+    if (vehicleInfo.availableFlags & LocationAvailable) {
+        if (_coordinate != vehicleInfo.location) {
+            _coordinate = vehicleInfo.location;
             emit coordinateChanged();
         }
     }
-
-    if (vehicleInfo.availableFlags & ADSB::AltitudeAvailable) {
-        if (!QGC::fuzzyCompare(vehicleInfo.altitude, altitude())) {
-            _info.altitude = vehicleInfo.altitude;
+    if (vehicleInfo.availableFlags & AltitudeAvailable) {
+        if (!(qIsNaN(vehicleInfo.altitude) && qIsNaN(_altitude)) && !qFuzzyCompare(vehicleInfo.altitude, _altitude)) {
+            _altitude = vehicleInfo.altitude;
             emit altitudeChanged();
         }
     }
-
-    if (vehicleInfo.availableFlags & ADSB::HeadingAvailable) {
-        if (!QGC::fuzzyCompare(vehicleInfo.heading, heading())) {
-            _info.heading = vehicleInfo.heading;
+    if (vehicleInfo.availableFlags & HeadingAvailable) {
+        if (!(qIsNaN(vehicleInfo.heading) && qIsNaN(_heading)) && !qFuzzyCompare(vehicleInfo.heading, _heading)) {
+            _heading = vehicleInfo.heading;
             emit headingChanged();
         }
     }
-
-    if (vehicleInfo.availableFlags & ADSB::AlertAvailable) {
-        if (vehicleInfo.alert != alert()) {
-            _info.alert = vehicleInfo.alert;
+    if (vehicleInfo.availableFlags & AlertAvailable) {
+        if (vehicleInfo.alert != _alert) {
+            _alert = vehicleInfo.alert;
             emit alertChanged();
         }
     }
+    _lastUpdateTimer.restart();
+}
 
-    (void) _lastUpdateTimer.restart();
+bool ADSBVehicle::expired()
+{
+    return _lastUpdateTimer.hasExpired(expirationTimeoutMs);
 }

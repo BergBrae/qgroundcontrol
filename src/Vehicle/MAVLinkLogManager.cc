@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -10,22 +10,35 @@
 #include "MAVLinkLogManager.h"
 #include "QGCApplication.h"
 #include "SettingsManager.h"
-#include "MultiVehicleManager.h"
-#include "Vehicle.h"
-#include "QGCLoggingCategory.h"
 
-#include <QtQml/QQmlEngine>
-#include <QtCore/QSettings>
-#include <QtNetwork/QHttpPart>
-#include <QtNetwork/QNetworkReply>
-#include <QtNetwork/QNetworkProxy>
-#include <QtCore/QDirIterator>
-#include <QtCore/QFile>
-#include <QtCore/QFileInfo>
+#include <QQmlContext>
+#include <QQmlProperty>
+#include <QQmlEngine>
+#include <QtQml>
+#include <QSettings>
+#include <QHttpPart>
+#include <QNetworkReply>
+#include <QFile>
+#include <QFileInfo>
 
 QGC_LOGGING_CATEGORY(MAVLinkLogManagerLog, "MAVLinkLogManagerLog")
 
-static constexpr const char* kSidecarExtension        = ".uploaded";
+static const char* kMAVLinkLogGroup         = "MAVLinkLogGroup";
+static const char* kEmailAddressKey         = "Email";
+static const char* kDescriptionsKey         = "Description";
+static const char* kDefaultDescr            = "QGroundControl Session";
+static const char* kPx4URLKey               = "LogURL";
+static const char* kDefaultPx4URL           = "https://logs.px4.io/upload";
+static const char* kEnableAutoUploadKey     = "EnableAutoUpload";
+static const char* kEnableAutoStartKey      = "EnableAutoStart";
+static const char* kEnableDeletetKey        = "EnableDelete";
+static const char* kSidecarExtension        = ".uploaded";
+static const char* kVideoURLKey             = "VideoURL";
+static const char* kWindSpeedKey            = "WindSpeed";
+static const char* kRateKey                 = "RateKey";
+static const char* kPublicLogKey            = "PublicLog";
+static const char* kFeedback                = "feedback";
+static const char* kVideoURL                = "videoUrl";
 
 //-----------------------------------------------------------------------------
 MAVLinkLogFiles::MAVLinkLogFiles(MAVLinkLogManager* manager, const QString& filePath, bool newFile)
@@ -137,7 +150,7 @@ MAVLinkLogProcessor::valid()
 bool
 MAVLinkLogProcessor::create(MAVLinkLogManager* manager, const QString path, uint8_t id)
 {
-    _fileName = _fileName.asprintf("%s/%03d-%s%s",
+    _fileName.sprintf("%s/%03d-%s%s",
                       path.toLatin1().data(),
                       id,
                       QDateTime::currentDateTime().toString("yyyy-MM-dd-hh-mm-ss-zzz").toLocal8Bit().data(),
@@ -729,7 +742,9 @@ MAVLinkLogManager::_sendLog(const QString& logFile)
     multiPart->append(logPart);
     file->setParent(multiPart);
     QNetworkRequest request(_uploadURL);
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, true);
+#if QT_VERSION > 0x050600
+    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
+#endif
     QNetworkReply* reply = _nam->post(request, multiPart);
     connect(reply, &QNetworkReply::finished,  this, &MAVLinkLogManager::_uploadFinished);
     connect(this, &MAVLinkLogManager::abortUpload, reply, &QNetworkReply::abort);

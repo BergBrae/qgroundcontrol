@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,19 +9,22 @@
 
 #pragma once
 
-#include <QtCore/QObject>
+#include <QObject>
+#include <QQuickItem>
+#include <QList>
+#include <QAbstractListModel>
 
+#include "UASInterface.h"
+#include "AutoPilotPlugin.h"
 #include "FactPanelController.h"
 
 class APMAirframeModel;
 class APMAirframeType;
-class QmlObjectListModel;
 
 /// MVC Controller for APMAirframeComponent.qml.
 class APMAirframeComponentController : public FactPanelController
 {
     Q_OBJECT
-    Q_MOC_INCLUDE("QmlObjectListModel.h")
     
 public:
     APMAirframeComponentController(void);
@@ -32,8 +35,10 @@ public:
     Q_INVOKABLE void loadParameters(const QString& paramFile);
 
 private slots:
-    void _githubJsonDownloadComplete(QString remoteFile, QString localFile, QString errorMsg);
-    void _paramFileDownloadComplete(QString remoteFile, QString localFile, QString errorMsg);
+    void _githubJsonDownloadFinished(QString remoteFile, QString localFile);
+    void _githubJsonDownloadError(QString errorMsg);
+    void _paramFileDownloadFinished(QString remoteFile, QString localFile);
+    void _paramFileDownloadError(QString errorMsg);
 
 private:
     void _fillFrameClasses(void);
@@ -62,7 +67,7 @@ public:
     Q_PROPERTY(QString      imageResourceDefault    MEMBER _imageResourceDefault    CONSTANT)
     Q_PROPERTY(bool         frameTypeSupported      MEMBER _frameTypeSupported      CONSTANT)
 
-    int     frameType       (void);
+    int     frameType       (void) { return _frameTypeFact->rawValue().toInt(); }
     QString imageResource   (void);
 
     QString         _name;

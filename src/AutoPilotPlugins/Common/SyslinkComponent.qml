@@ -9,16 +9,16 @@
 
 
 
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Dialogs
-import QtQuick.Layouts
+import QtQuick          2.2
+import QtQuick.Controls 1.2
+import QtQuick.Dialogs  1.2
+import QtQuick.Layouts  1.2
 
-import QGroundControl.FactSystem
-import QGroundControl.FactControls
-import QGroundControl.Controls
-import QGroundControl.ScreenTools
-import QGroundControl.Controllers
+import QGroundControl.FactSystem    1.0
+import QGroundControl.FactControls  1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.ScreenTools   1.0
+import QGroundControl.Controllers   1.0
 
 SetupPage {
     id:             syslinkPage
@@ -41,7 +41,7 @@ SetupPage {
 
             QGCLabel {
                 text: qsTr("Radio Settings")
-                font.bold:   true
+                font.family: ScreenTools.demiboldFontFamily
             }
 
             Rectangle {
@@ -103,7 +103,7 @@ SetupPage {
                         Layout.fillWidth:   true
                         font.pointSize:     ScreenTools.smallFontPointSize
                         wrapMode:           Text.WordWrap
-                        text:               qsTr("Address in hex. Default is E7E7E7E7E7.")
+                        text:               "Address in hex. Default is E7E7E7E7E7."
                     }
 
 
@@ -117,13 +117,13 @@ SetupPage {
                         Layout.fillWidth:       true
                         model:                  controller.radioRates
                         currentIndex:           controller.radioRate
-                        onActivated: (index) => {
+                        onActivated: {
                             controller.radioRate = index
                         }
                     }
 
                     QGCButton {
-                        text:                           qsTr("Restore Defaults")
+                        text:                           "Restore Defaults"
                         width:                          textEditWidth
                         onClicked: {
                             controller.resetDefaults()

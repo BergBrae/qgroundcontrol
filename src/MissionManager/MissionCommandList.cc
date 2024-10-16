@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -8,11 +8,23 @@
  ****************************************************************************/
 
 #include "MissionCommandList.h"
+#include "FactMetaData.h"
+#include "Vehicle.h"
+#include "FirmwarePluginManager.h"
+#include "QGCApplication.h"
+#include "QGroundControlQmlGlobal.h"
 #include "JsonHelper.h"
 #include "MissionCommandUIInfo.h"
-#include "QGCLoggingCategory.h"
 
-#include <QtCore/QJsonArray>
+#include <QStringList>
+#include <QJsonDocument>
+#include <QJsonParseError>
+#include <QJsonArray>
+#include <QDebug>
+#include <QFile>
+
+const char* MissionCommandList::_versionJsonKey =       "version";
+const char* MissionCommandList::_mavCmdInfoJsonKey =    "mavCmdInfo";
 
 MissionCommandList::MissionCommandList(const QString& jsonFilename, bool baseCommandList, QObject* parent)
     : QObject(parent)
@@ -28,15 +40,30 @@ void MissionCommandList::_loadMavCmdInfoJson(const QString& jsonFilename, bool b
 
     qCDebug(MissionCommandsLog) << "Loading" << jsonFilename;
 
-    QString errorString;
-    int version;
-    QJsonObject jsonObject = JsonHelper::openInternalQGCJsonFile(jsonFilename, qgcFileType, 1, 1, version, errorString);
-    if (!errorString.isEmpty()) {
-        qWarning() << "Internal Error: " << errorString;
+    QFile jsonFile(jsonFilename);
+    if (!jsonFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning() << "Unable to open file" << jsonFilename << jsonFile.errorString();
         return;
     }
 
-    QJsonValue jsonValue = jsonObject.value(_mavCmdInfoJsonKey);
+    QByteArray bytes = jsonFile.readAll();
+    jsonFile.close();
+    QJsonParseError jsonParseError;
+    QJsonDocument doc = QJsonDocument::fromJson(bytes, &jsonParseError);
+    if (jsonParseError.error != QJsonParseError::NoError) {
+        qWarning() << jsonFilename << "Unable to open json document" << jsonParseError.errorString();
+        return;
+    }
+
+    QJsonObject json = doc.object();
+
+    int version = json.value(_versionJsonKey).toInt();
+    if (version != 1) {
+        qWarning() << jsonFilename << "Invalid version" << version;
+        return;
+    }
+
+    QJsonValue jsonValue = json.value(_mavCmdInfoJsonKey);
     if (!jsonValue.isArray()) {
         qWarning() << jsonFilename << "mavCmdInfo not array";
         return;

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -11,28 +11,26 @@
 /// @file
 ///     @author Don Gagne <don@thegagnes.com>
 
-#pragma once
+#ifndef MultiVehicleManager_H
+#define MultiVehicleManager_H
 
-#include <QtCore/QTimer>
-#include <QtPositioning/QGeoCoordinate>
-#include <QtCore/QLoggingCategory>
-
-#include "QGCToolbox.h"
+#include "Vehicle.h"
+#include "QGCMAVLink.h"
 #include "QmlObjectListModel.h"
+#include "QGCToolbox.h"
+#include "QGCLoggingCategory.h"
 
 class FirmwarePluginManager;
+class FollowMe;
 class JoystickManager;
 class QGCApplication;
 class MAVLinkProtocol;
-class LinkInterface;
-class Vehicle;
 
 Q_DECLARE_LOGGING_CATEGORY(MultiVehicleManagerLog)
 
 class MultiVehicleManager : public QGCTool
 {
     Q_OBJECT
-    Q_MOC_INCLUDE("Vehicle.h")
 
 public:
     MultiVehicleManager(QGCApplication* app, QGCToolbox* toolbox);
@@ -42,21 +40,28 @@ public:
 
     Q_PROPERTY(bool                 activeVehicleAvailable          READ activeVehicleAvailable                                         NOTIFY activeVehicleAvailableChanged)
     Q_PROPERTY(bool                 parameterReadyVehicleAvailable  READ parameterReadyVehicleAvailable                                 NOTIFY parameterReadyVehicleAvailableChanged)
+    /// The current, active vehicle
     Q_PROPERTY(Vehicle*             activeVehicle                   READ activeVehicle                  WRITE setActiveVehicle          NOTIFY activeVehicleChanged)
+    /// The list of all connected vehicles
     Q_PROPERTY(QmlObjectListModel*  vehicles                        READ vehicles                                                       CONSTANT)
+    /// Enable sending heartbeats to the vehicle (defaults to true)
     Q_PROPERTY(bool                 gcsHeartBeatEnabled             READ gcsHeartbeatEnabled            WRITE setGcsHeartbeatEnabled    NOTIFY gcsHeartBeatEnabledChanged)
+    /// A disconnected vehicle used for offline editing. It will match the vehicle type specified in Settings.
     Q_PROPERTY(Vehicle*             offlineEditingVehicle           READ offlineEditingVehicle                                          CONSTANT)
-    Q_PROPERTY(QGeoCoordinate       lastKnownLocation               READ lastKnownLocation                                              NOTIFY lastKnownLocationChanged) //< Current vehicles last know location
+    /// The current vehicle's last known location
+    Q_PROPERTY(QGeoCoordinate       lastKnownLocation               READ lastKnownLocation                                              NOTIFY lastKnownLocationChanged)
 
     // Methods
 
     Q_INVOKABLE Vehicle* getVehicleById(int vehicleId);
 
+    UAS* activeUas(void) { return _activeVehicle ? _activeVehicle->uas() : nullptr; }
+
     // Property accessors
 
-    bool activeVehicleAvailable(void) const{ return _activeVehicleAvailable; }
+    bool activeVehicleAvailable(void) { return _activeVehicleAvailable; }
 
-    bool parameterReadyVehicleAvailable(void) const{ return _parameterReadyVehicleAvailable; }
+    bool parameterReadyVehicleAvailable(void) { return _parameterReadyVehicleAvailable; }
 
     Vehicle* activeVehicle(void) { return _activeVehicle; }
     void setActiveVehicle(Vehicle* vehicle);
@@ -67,6 +72,12 @@ public:
     void setGcsHeartbeatEnabled(bool gcsHeartBeatEnabled);
 
     Vehicle* offlineEditingVehicle(void) { return _offlineEditingVehicle; }
+
+    /// Determines if the link is in use by a Vehicle
+    ///     @param link Link to test against
+    ///     @param skipVehicle Don't consider this Vehicle as part of the test
+    /// @return true: link is in use by one or more Vehicles
+    bool linkInUse(LinkInterface* link, Vehicle* skipVehicle);
 
     // Override from QGCTool
     virtual void setToolbox(QGCToolbox *toolbox);
@@ -117,6 +128,8 @@ private:
 
     QTimer              _gcsHeartbeatTimer;             ///< Timer to emit heartbeats
     bool                _gcsHeartbeatEnabled;           ///< Enabled/disable heartbeat emission
-    static constexpr int    _gcsHeartbeatRateMSecs = 1000;  ///< Heartbeat rate
-    static constexpr const char* _gcsHeartbeatEnabledKey = "gcsHeartbeatEnabled";
+    static const int    _gcsHeartbeatRateMSecs = 1000;  ///< Heartbeat rate
+    static const char*  _gcsHeartbeatEnabledKey;
 };
+
+#endif

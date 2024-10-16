@@ -1,20 +1,19 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
  *
  ****************************************************************************/
 
-#pragma once
+#ifndef SyslinkComponentController_H
+#define SyslinkComponentController_H
 
 #include "FactPanelController.h"
-
-#include <QtCore/QLoggingCategory>
-#include <QtCore/QVariant>
-
-class Vehicle;
+#include "UASInterface.h"
+#include "QGCLoggingCategory.h"
+#include "AutoPilotPlugin.h"
 
 Q_DECLARE_LOGGING_CATEGORY(SyslinkComponentControllerLog)
 
@@ -25,7 +24,6 @@ namespace Ui {
 class SyslinkComponentController : public FactPanelController
 {
     Q_OBJECT
-    Q_MOC_INCLUDE("Vehicle.h")
 
 public:
     SyslinkComponentController      ();
@@ -64,3 +62,5 @@ private:
     QStringList _dataRates;
 
 };
+
+#endif // SyslinkComponentController_H

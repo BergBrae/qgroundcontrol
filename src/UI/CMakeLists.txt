@@ -1,27 +1,36 @@
-find_package(Qt6 REQUIRED COMPONENTS Core Qml)
+add_subdirectory(preferences)
+add_subdirectory(toolbar)
 
-qt_add_library(UI STATIC)
+add_library(ui
 
-file(GLOB_RECURSE QML_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*.qml)
-file(GLOB QML_RESOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/toolbar/Images/*.*)
-qt_add_qml_module(UI
-    URI QGroundControl.UI
-    VERSION 1.0
-    QML_FILES ${QML_SOURCES}
-    RESOURCES ${QML_RESOURCES}
-    OUTPUT_TARGETS UI_targets
-    IMPORT_PATH ${QT_QML_OUTPUT_DIRECTORY}
-    IMPORTS
-        QtQuick
-        QtQuick.Controls
-        QtQuick.Dialogs
-        QtQuick.Layouts
-        QtQuick.Window
+	MAVLinkDecoder.cc
+	MAVLinkDecoder.h
+	QGCMapRCToParamDialog.h
+	QGCPluginHost.cc
+	QGCPluginHost.h
 
-        QGroundControl
-        QGroundControl.Palette
-        QGroundControl.Controls
-        QGroundControl.ScreenTools
-        QGroundControl.FlightDisplay
-        QGroundControl.FlightMap
+	# UI
+	QGCMapRCToParamDialog.ui
+	QGCPluginHost.ui
+	QMap3D.ui
+)
+
+add_custom_target(uiQml
+	SOURCES
+		AppSettings.qml
+		ExitWithErrorWindow.qml
+		MainRootWindow.qml
+)
+
+target_link_libraries(ui
+	PUBLIC
+		qgc
+)
+
+target_include_directories(ui
+	INTERFACE
+		${CMAKE_CURRENT_SOURCE_DIR}
+                ${CMAKE_CURRENT_BINARY_DIR}
+	PRIVATE
+		linechart
 )

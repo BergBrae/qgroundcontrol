@@ -7,19 +7,19 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtQuick.Layouts
+import QtQuick          2.11
+import QtQuick.Layouts  1.11
 
-import QGroundControl
-import QGroundControl.Controls
-import QGroundControl.MultiVehicleManager
-import QGroundControl.ScreenTools
-import QGroundControl.Palette
+import QGroundControl                       1.0
+import QGroundControl.Controls              1.0
+import QGroundControl.MultiVehicleManager   1.0
+import QGroundControl.ScreenTools           1.0
+import QGroundControl.Palette               1.0
 
 //-------------------------------------------------------------------------
 //-- Telemetry RSSI
 Item {
-    id:             control
+    id:             _root
     anchors.top:    parent.top
     anchors.bottom: parent.bottom
     width:          telemIcon.width * 1.1
@@ -29,6 +29,50 @@ Item {
     property var  _activeVehicle:   QGroundControl.multiVehicleManager.activeVehicle
     property bool _hasTelemetry:    _activeVehicle ? _activeVehicle.telemetryLRSSI !== 0 : false
 
+    Component {
+        id: telemRSSIInfo
+        Rectangle {
+            width:  telemCol.width   + ScreenTools.defaultFontPixelWidth  * 3
+            height: telemCol.height  + ScreenTools.defaultFontPixelHeight * 2
+            radius: ScreenTools.defaultFontPixelHeight * 0.5
+            color:  qgcPal.window
+            border.color:   qgcPal.text
+            Column {
+                id:                 telemCol
+                spacing:            ScreenTools.defaultFontPixelHeight * 0.5
+                width:              Math.max(telemGrid.width, telemLabel.width)
+                anchors.margins:    ScreenTools.defaultFontPixelHeight
+                anchors.centerIn:   parent
+                QGCLabel {
+                    id:             telemLabel
+                    text:           qsTr("Telemetry RSSI Status")
+                    font.family:    ScreenTools.demiboldFontFamily
+                    anchors.horizontalCenter: parent.horizontalCenter
+                }
+                GridLayout {
+                    id:                 telemGrid
+                    anchors.margins:    ScreenTools.defaultFontPixelHeight
+                    columnSpacing:      ScreenTools.defaultFontPixelWidth
+                    columns:            2
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    QGCLabel { text: qsTr("Local RSSI:") }
+                    QGCLabel { text: activeVehicle.telemetryLRSSI + " dBm"}
+                    QGCLabel { text: qsTr("Remote RSSI:") }
+                    QGCLabel { text: activeVehicle.telemetryRRSSI + " dBm"}
+                    QGCLabel { text: qsTr("RX Errors:") }
+                    QGCLabel { text: activeVehicle.telemetryRXErrors }
+                    QGCLabel { text: qsTr("Errors Fixed:") }
+                    QGCLabel { text: activeVehicle.telemetryFixed }
+                    QGCLabel { text: qsTr("TX Buffer:") }
+                    QGCLabel { text: activeVehicle.telemetryTXBuffer }
+                    QGCLabel { text: qsTr("Local Noise:") }
+                    QGCLabel { text: activeVehicle.telemetryLNoise }
+                    QGCLabel { text: qsTr("Remote Noise:") }
+                    QGCLabel { text: activeVehicle.telemetryRNoise }
+                }
+            }
+        }
+    }
     QGCColoredImage {
         id:                 telemIcon
         anchors.top:        parent.top
@@ -39,62 +83,10 @@ Item {
         fillMode:           Image.PreserveAspectFit
         color:              qgcPal.buttonText
     }
-
     MouseArea {
-        anchors.fill:   parent
-        onClicked:      mainWindow.showIndicatorDrawer(telemRSSIInfoPage, control)
-    }
-
-    Component {
-        id: telemRSSIInfoPage
-
-        ToolIndicatorPage {
-            showExpand: false
-
-            contentComponent: Component {
-                ColumnLayout {
-                    spacing: ScreenTools.defaultFontPixelHeight / 2
-
-                    SettingsGroupLayout {
-                        heading: qsTr("Telemetry RSSI Status")
-
-                        LabelledLabel {
-                            label:      qsTr("Local RSSI:")
-                            labelText:  _activeVehicle.telemetryLRSSI + " " + qsTr("dBm")
-                        }
-
-                        LabelledLabel {
-                            label:      qsTr("Remote RSSI:")
-                            labelText:  _activeVehicle.telemetryRRSSI + " " + qsTr("dBm")
-                        }
-
-                        LabelledLabel {
-                            label:      qsTr("RX Errors:")
-                            labelText:  _activeVehicle.telemetryRXErrors
-                        }
-
-                        LabelledLabel {
-                            label:      qsTr("Errors Fixed:")
-                            labelText:  _activeVehicle.telemetryFixed
-                        }
-
-                        LabelledLabel {
-                            label:      qsTr("TX Buffer:")
-                            labelText:  _activeVehicle.telemetryTXBuffer
-                        }
-
-                        LabelledLabel {
-                            label:      qsTr("Local Noise:")
-                            labelText:  _activeVehicle.telemetryLNoise
-                        }
-
-                        LabelledLabel {
-                            label:      qsTr("Remote Noise:")
-                            labelText:  _activeVehicle.telemetryRNoise
-                        }
-                    }
-                }
-            }
+        anchors.fill: parent
+        onClicked: {
+            mainWindow.showPopUp(_root, telemRSSIInfo)
         }
     }
 }

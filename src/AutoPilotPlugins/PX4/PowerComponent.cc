@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -12,8 +12,7 @@
 ///     @author Gus Grubba <gus@auterion.com>
 
 #include "PowerComponent.h"
-#include "ParameterManager.h"
-#include "Vehicle.h"
+#include "PX4AutoPilotPlugin.h"
 
 PowerComponent::PowerComponent(Vehicle* vehicle, AutoPilotPlugin* autopilot, QObject* parent) :
     VehicleComponent(vehicle, autopilot, parent),
@@ -43,21 +42,14 @@ bool PowerComponent::requiresSetup(void) const
 
 bool PowerComponent::setupComplete(void) const
 {
-    if (!_vehicle->parameterManager()->parameterExists(ParameterManager::defaultComponentId, "BAT1_SOURCE") ||
-        !_vehicle->parameterManager()->parameterExists(ParameterManager::defaultComponentId, "BAT1_V_CHARGED") ||
-        !_vehicle->parameterManager()->parameterExists(ParameterManager::defaultComponentId, "BAT1_V_EMPTY") ||
-        !_vehicle->parameterManager()->parameterExists(ParameterManager::defaultComponentId, "BAT1_N_CELLS")) {
-        return true;
-    }
-    return _vehicle->parameterManager()->getParameter(ParameterManager::defaultComponentId, "BAT1_SOURCE")->rawValue().toInt() == -1 ||
-        (_vehicle->parameterManager()->getParameter(ParameterManager::defaultComponentId, "BAT1_V_CHARGED")->rawValue().toFloat() != 0.0f &&
-        _vehicle->parameterManager()->getParameter(ParameterManager::defaultComponentId, "BAT1_V_EMPTY")->rawValue().toFloat() != 0.0f &&
-        _vehicle->parameterManager()->getParameter(ParameterManager::defaultComponentId, "BAT1_N_CELLS")->rawValue().toInt() != 0);
+    return _vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, "BAT_V_CHARGED")->rawValue().toFloat() != 0.0f &&
+        _vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, "BAT_V_EMPTY")->rawValue().toFloat() != 0.0f &&
+        _vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, "BAT_N_CELLS")->rawValue().toInt() != 0;
 }
 
 QStringList PowerComponent::setupCompleteChangedTriggerList(void) const
 {
-    return {"BAT1_SOURCE", "BAT1_V_CHARGED", "BAT1_V_EMPTY", "BAT1_N_CELLS"};
+    return {"BAT_V_CHARGED", "BAT_V_EMPTY", "BAT_N_CELLS"};
 }
 
 QUrl PowerComponent::setupSource(void) const

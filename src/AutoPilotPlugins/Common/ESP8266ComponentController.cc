@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -13,11 +13,12 @@
 ///     @author Gus Grubba <gus@auterion.com>
 
 #include "ESP8266ComponentController.h"
+#include "QGCApplication.h"
+#include "UAS.h"
 #include "ParameterManager.h"
-#include "Vehicle.h"
-#include "QGCLoggingCategory.h"
 
-#include <QtNetwork/QHostAddress>
+#include <QHostAddress>
+#include <QtEndian>
 
 QGC_LOGGING_CATEGORY(ESP8266ComponentControllerLog, "ESP8266ComponentControllerLog")
 
@@ -51,11 +52,6 @@ ESP8266ComponentController::ESP8266ComponentController()
 ESP8266ComponentController::~ESP8266ComponentController()
 {
 
-}
-
-int ESP8266ComponentController::componentID()
-{
-    return MAV_COMP_ID_UDP_BRIDGE;
 }
 
 //-----------------------------------------------------------------------------

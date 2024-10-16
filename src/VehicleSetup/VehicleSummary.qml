@@ -8,15 +8,16 @@
  ****************************************************************************/
 
 
-import QtQuick
-import QtQuick.Controls
+import QtQuick                  2.3
+import QtQuick.Controls         1.2
+import QtQuick.Controls.Styles  1.4
 
-import QGroundControl
-import QGroundControl.FactSystem
-import QGroundControl.Controls
-import QGroundControl.ScreenTools
-import QGroundControl.MultiVehicleManager
-import QGroundControl.Palette
+import QGroundControl                       1.0
+import QGroundControl.FactSystem            1.0
+import QGroundControl.Controls              1.0
+import QGroundControl.ScreenTools           1.0
+import QGroundControl.MultiVehicleManager   1.0
+import QGroundControl.Palette               1.0
 
 Rectangle {
     id:             _summaryRoot
@@ -80,7 +81,7 @@ Rectangle {
                 width:			parent.width
                 wrapMode:		Text.WordWrap
                 color:			setupComplete ? qgcPal.text : qgcPal.warningText
-                font.bold:      true
+                font.family:    ScreenTools.demiboldFontFamily
                 horizontalAlignment: Text.AlignHCenter
                 text:           setupComplete ?
                     qsTr("Below you will find a summary of the settings for your vehicle. To the left are the setup menus for each component.") :
@@ -145,8 +146,6 @@ Rectangle {
                                 anchors.fill:       parent
                                 anchors.margins:    ScreenTools.defaultFontPixelWidth
                                 source:             modelData.summaryQmlSource
-
-                                property var vehicleComponent: modelData
                             }
                         }
                     }

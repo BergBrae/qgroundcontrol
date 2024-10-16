@@ -1,19 +1,23 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
  *
  ****************************************************************************/
 
-#pragma once
 
-#include <QtCore/QObject>
-#include <QtCore/QString>
-#include <QtCore/QVariant>
-#include <QtCore/QJsonArray>
-#include <QtCore/QJsonObject>
+/// @file
+///     @author Don Gagne <don@thegagnes.com>
+
+#ifndef FactMetaData_H
+#define FactMetaData_H
+
+#include <QObject>
+#include <QString>
+#include <QVariant>
+#include <QJsonObject>
 
 /// Holds the meta data associated with a Fact.
 ///
@@ -44,52 +48,26 @@ public:
 
     typedef QVariant (*Translator)(const QVariant& from);
 
-    // Custom function to validate a cooked value.
-    //  @return Error string for failed validation explanation to user. Empty string indicates no error.
-    typedef QString (*CustomCookedValidator)(const QVariant& cookedValue);
-
-    typedef QMap<QString /* param Name */, FactMetaData*> NameToMetaDataMap_t;
-
     FactMetaData(QObject* parent = nullptr);
     FactMetaData(ValueType_t type, QObject* parent = nullptr);
     FactMetaData(ValueType_t type, const QString name, QObject* parent = nullptr);
     FactMetaData(const FactMetaData& other, QObject* parent = nullptr);
 
-    typedef QMap<QString, QString> DefineMap_t;
-
     static QMap<QString, FactMetaData*> createMapFromJsonFile(const QString& jsonFilename, QObject* metaDataParent);
-    static QMap<QString, FactMetaData*> createMapFromJsonArray(const QJsonArray jsonArray, DefineMap_t& defineMap, QObject* metaDataParent);
+    static QMap<QString, FactMetaData*> createMapFromJsonArray(const QJsonArray jsonArray, QMap<QString, QString>& defineMap, QObject* metaDataParent);
 
     static FactMetaData* createFromJsonObject(const QJsonObject& json, QMap<QString, QString>& defineMap, QObject* metaDataParent);
 
     const FactMetaData& operator=(const FactMetaData& other);
 
-    /// Converts from meters to the user specified horizontal distance unit
-    static QVariant metersToAppSettingsHorizontalDistanceUnits(const QVariant& meters);
+    /// Converts from meters to the user specified distance unit
+    static QVariant metersToAppSettingsDistanceUnits(const QVariant& meters);
 
-    /// Converts from user specified horizontal distance unit to meters
-    static QVariant appSettingsHorizontalDistanceUnitsToMeters(const QVariant& distance);
+    /// Converts from user specified distance unit to meters
+    static QVariant appSettingsDistanceUnitsToMeters(const QVariant& distance);
 
-    /// Returns the string for horizontal distance units which has configued by user
-    static QString appSettingsHorizontalDistanceUnitsString(void);
-
-    /// Converts from meters to the user specified vertical distance unit
-    static QVariant metersToAppSettingsVerticalDistanceUnits(const QVariant& meters);
-
-    /// Converts from user specified vertical distance unit to meters
-    static QVariant appSettingsVerticalDistanceUnitsToMeters(const QVariant& distance);
-
-    /// Returns the string for vertical distance units which has configued by user
-    static QString appSettingsVerticalDistanceUnitsString(void);
-
-    /// Converts from grams to the user specified weight unit
-    static QVariant gramsToAppSettingsWeightUnits(const QVariant& grams);
-
-    /// Converts from user specified weight unit to grams
-    static QVariant appSettingsWeightUnitsToGrams(const QVariant& weight);
-
-    /// Returns the string for weight units which has configued by user
-    static QString appSettingsWeightUnitsString(void);
+    /// Returns the string for distance units which has configued by user
+    static QString appSettingsDistanceUnitsString(void);
 
     /// Converts from meters to the user specified distance unit
     static QVariant squareMetersToAppSettingsAreaUnits(const QVariant& squareMeters);
@@ -99,15 +77,6 @@ public:
 
     /// Returns the string for distance units which has configued by user
     static QString appSettingsAreaUnitsString(void);
-
-    /// Converts from meters/second to the user specified speed unit
-    static QVariant metersSecondToAppSettingsSpeedUnits(const QVariant& metersSecond);
-
-    /// Converts from user specified speed unit to meters/second
-    static QVariant appSettingsSpeedUnitsToMetersSecond(const QVariant& speed);
-
-    /// Returns the string for speed units which has configued by user
-    static QString appSettingsSpeedUnitsString();
 
     static const QString defaultCategory    ();
     static const QString defaultGroup       ();
@@ -125,10 +94,10 @@ public:
     QString         longDescription         (void) const { return _longDescription;}
     QVariant        rawMax                  (void) const { return _rawMax; }
     QVariant        cookedMax               (void) const;
-    bool            maxIsDefaultForType     (void) const { return _rawMax == _maxForType(); }
+    bool            maxIsDefaultForType     (void) const { return _maxIsDefaultForType; }
     QVariant        rawMin                  (void) const { return _rawMin; }
     QVariant        cookedMin               (void) const;
-    bool            minIsDefaultForType     (void) const { return _rawMin == _minForType(); }
+    bool            minIsDefaultForType     (void) const { return _minIsDefaultForType; }
     QString         name                    (void) const { return _name; }
     QString         shortDescription        (void) const { return _shortDescription; }
     ValueType_t     type                    (void) const { return _type; }
@@ -154,9 +123,6 @@ public:
 
     /// Used to add new values to the enum lists after the meta data has been loaded
     void addEnumInfo(const QString& name, const QVariant& value);
-
-    /// Used to remove values from the enum lists after the meta data has been loaded
-    void removeEnumInfo(const QVariant& value);
 
     void setDecimalPlaces           (int decimalPlaces)                 { _decimalPlaces = decimalPlaces; }
     void setRawDefaultValue         (const QVariant& rawDefaultValue);
@@ -200,55 +166,16 @@ public:
     /// @returns false: Convertion failed
     bool clampValue(const QVariant& cookedValue, QVariant& typedValue);
 
-    /// Sets a custom cooked validator function for this metadata. The custom validator will be called
-    /// prior to the standard validator when convertAndValidateCooked is called.
-    void setCustomCookedValidator(CustomCookedValidator customValidator) { _customCookedValidator = customValidator; }
-
     static const int kDefaultDecimalPlaces = 3;  ///< Default value for decimal places if not specified/known
     static const int kUnknownDecimalPlaces = -1; ///< Number of decimal places to specify is not known
 
     static ValueType_t stringToType(const QString& typeString, bool& unknownType);
-    static QString typeToString(ValueType_t type);
     static size_t typeToSize(ValueType_t type);
 
-    static QVariant minForType(ValueType_t type);
-    static QVariant maxForType(ValueType_t type);
-
-    static constexpr const char* kDefaultCategory = QT_TRANSLATE_NOOP("FactMetaData", "Other");
-    static constexpr const char* kDefaultGroup    = QT_TRANSLATE_NOOP("FactMetaData", "Misc");
-    static constexpr const char* qgcFileType                           = "FactMetaData";
-
 private:
-    QVariant _minForType                (void) const { return minForType(_type); };
-    QVariant _maxForType                (void) const { return maxForType(_type); };
-    void    _setAppSettingsTranslators  (void);
-
-    /// Clamp a value to be within cookedMin and cookedMax
-    template<class T>
-    void clamp(QVariant& variantValue) const {
-        if (cookedMin().value<T>() > variantValue.value<T>()) {
-            variantValue = cookedMin();
-        } else if(variantValue.value<T>() > cookedMax().value<T>()) {
-            variantValue = cookedMax();
-        }
-    }
-
-    template<class T>
-    bool isInCookedLimit(const QVariant& variantValue) const {
-        return cookedMin().value<T>() <= variantValue.value<T>() && variantValue.value<T>() <= cookedMax().value<T>();
-    }
-
-    template<class T>
-    bool isInRawLimit(const QVariant& variantValue) const {
-        return rawMin().value<T>() <= variantValue.value<T>() && variantValue.value<T>() <= rawMax().value<T>();
-    }
-
-    bool isInRawMinLimit(const QVariant& variantValue) const;
-    bool isInRawMaxLimit(const QVariant& variantValue) const;
-
-    static bool _parseEnum          (const QJsonObject& jsonObject, DefineMap_t defineMap, QStringList& rgDescriptions, QStringList& rgValues, QString& errorString);
-    static bool _parseValuesArray   (const QJsonObject& jsonObject, QStringList& rgDescriptions, QList<double>& rgValues, QString& errorString);
-    static bool _parseBitmaskArray  (const QJsonObject& jsonObject, QStringList& rgDescriptions, QList<int>& rgValues, QString& errorString);
+    QVariant _minForType(void) const;
+    QVariant _maxForType(void) const;
+    void _setAppSettingsTranslators(void);
 
     // Built in translators
     static QVariant _defaultTranslator(const QVariant& from) { return from; }
@@ -282,33 +209,25 @@ private:
     static QVariant _inchesToCentimeters(const QVariant& inches);
     static QVariant _celsiusToFarenheit(const QVariant& celsius);
     static QVariant _farenheitToCelsius(const QVariant& farenheit);
-    static QVariant _kilogramsToGrams(const QVariant& kg);
-    static QVariant _ouncesToGrams(const QVariant& oz);
-    static QVariant _poundsToGrams(const QVariant& lbs);
-    static QVariant _gramsToKilograms(const QVariant& g);
-    static QVariant _gramsToOunces(const QVariant& g);
-    static QVariant _gramsToPunds(const QVariant& g);
-
 
     enum UnitTypes {
-        UnitHorizontalDistance = 0,
-        UnitVerticalDistance,
+        UnitDistance = 0,
         UnitArea,
         UnitSpeed,
-        UnitTemperature,
-        UnitWeight
+        UnitTemperature
     };
 
     struct AppSettingsTranslation_s {
-        QString       rawUnits;
-        const char*   cookedUnits;
-        UnitTypes     unitType;
-        uint32_t      unitOption;
-        Translator    rawTranslator;
-        Translator    cookedTranslator;
+        QString     rawUnits;
+        const char*     cookedUnits;
+        UnitTypes       unitType;
+        uint32_t        unitOption;
+        Translator      rawTranslator;
+        Translator      cookedTranslator;
     };
 
-    static const AppSettingsTranslation_s* _findAppSettingsUnitsTranslation(const QString& rawUnits, UnitTypes type);
+    static const AppSettingsTranslation_s* _findAppSettingsDistanceUnitsTranslation(const QString& rawUnits);
+    static const AppSettingsTranslation_s* _findAppSettingsAreaUnitsTranslation(const QString& rawUnits);
 
     static void _loadJsonDefines(const QJsonObject& jsonDefinesObject, QMap<QString, QString>& defineMap);
 
@@ -324,7 +243,9 @@ private:
     QString         _group;
     QString         _longDescription;
     QVariant        _rawMax;
+    bool            _maxIsDefaultForType;
     QVariant        _rawMin;
+    bool            _minIsDefaultForType;
     QString         _name;
     QString         _shortDescription;
     QString         _rawUnits;
@@ -338,92 +259,44 @@ private:
     bool            _readOnly;
     bool            _writeOnly;
     bool            _volatile;
-    CustomCookedValidator _customCookedValidator = nullptr;
 
     // Exact conversion constants
-    static constexpr const struct UnitConsts_s {
-        static constexpr const qreal secondsPerHour = 3600.0;
-        static constexpr const qreal knotsToKPH = 1.852;
-        static constexpr const qreal milesToMeters = 1609.344;
-        static constexpr const qreal feetToMeters = 0.3048;
-        static constexpr const qreal inchesToCentimeters = 2.54;
-        static constexpr const qreal ouncesToGrams = 28.3495;
-        static constexpr const qreal poundsToGrams = 453.592;
-    } constants{};
+    static const struct UnitConsts_s {
+        static const qreal secondsPerHour;
+        static const qreal knotsToKPH;
+        static const qreal milesToMeters;
+        static const qreal feetToMeters;
+        static const qreal inchesToCentimeters;
+    } constants;
 
     struct BuiltInTranslation_s {
         QString rawUnits;
         const char* cookedUnits;
         Translator  rawTranslator;
         Translator  cookedTranslator;
+
     };
 
     static const BuiltInTranslation_s _rgBuiltInTranslations[];
 
     static const AppSettingsTranslation_s _rgAppSettingsTranslations[];
 
-    static constexpr const char* _jsonMetaDataDefinesName              = "QGC.MetaData.Defines";
-    static constexpr const char* _jsonMetaDataFactsName                = "QGC.MetaData.Facts";
-    static constexpr const char* _enumStringsJsonKey                   = "enumStrings";
-    static constexpr const char* _enumValuesJsonKey                    = "enumValues";
+    static const char* _nameJsonKey;
+    static const char* _decimalPlacesJsonKey;
+    static const char* _typeJsonKey;
+    static const char* _shortDescriptionJsonKey;
+    static const char* _longDescriptionJsonKey;
+    static const char* _unitsJsonKey;
+    static const char* _defaultValueJsonKey;
+    static const char* _mobileDefaultValueJsonKey;
+    static const char* _minJsonKey;
+    static const char* _maxJsonKey;
+    static const char* _incrementJsonKey;
+    static const char* _hasControlJsonKey;
+    static const char* _qgcRebootRequiredJsonKey;
 
-    // This is the newer json format for enums and bitmasks. They are used by the new COMPONENT_METADATA parameter metadata for example.
-    static constexpr const char* _enumValuesArrayJsonKey               = "values";
-    static constexpr const char* _enumBitmaskArrayJsonKey              = "bitmask";
-    static constexpr const char* _enumValuesArrayValueJsonKey          = "value";
-    static constexpr const char* _enumValuesArrayDescriptionJsonKey    = "description";
-    static constexpr const char* _enumBitmaskArrayIndexJsonKey         = "index";
-    static constexpr const char* _enumBitmaskArrayDescriptionJsonKey   = "description";
-
-    static constexpr const char* _rgKnownTypeStrings[] = {
-        "Uint8",
-        "Int8",
-        "Uint16",
-        "Int16",
-        "Uint32",
-        "Int32",
-        "Uint64",
-        "Int64",
-        "Float",
-        "Double",
-        "String",
-        "Bool",
-        "ElapsedSeconds",
-        "Custom",
-    };
-
-    static constexpr const  ValueType_t _rgKnownValueTypes[] = {
-        valueTypeUint8,
-        valueTypeInt8,
-        valueTypeUint16,
-        valueTypeInt16,
-        valueTypeUint32,
-        valueTypeInt32,
-        valueTypeUint64,
-        valueTypeInt64,
-        valueTypeFloat,
-        valueTypeDouble,
-        valueTypeString,
-        valueTypeBool,
-        valueTypeElapsedTimeInSeconds,
-        valueTypeCustom,
-    };
-
-    static constexpr const char* _decimalPlacesJsonKey =       "decimalPlaces";
-    static constexpr const char* _nameJsonKey =                "name";
-    static constexpr const char* _typeJsonKey =                "type";
-    static constexpr const char* _shortDescriptionJsonKey =    "shortDesc";
-    static constexpr const char* _longDescriptionJsonKey =     "longDesc";
-    static constexpr const char* _unitsJsonKey =               "units";
-    static constexpr const char* _defaultValueJsonKey =        "default";
-    static constexpr const char* _mobileDefaultValueJsonKey =  "mobileDefault";
-    static constexpr const char* _minJsonKey =                 "min";
-    static constexpr const char* _maxJsonKey =                 "max";
-    static constexpr const char* _incrementJsonKey =           "increment";
-    static constexpr const char* _hasControlJsonKey =          "control";
-    static constexpr const char* _qgcRebootRequiredJsonKey =   "qgcRebootRequired";
-    static constexpr const char* _rebootRequiredJsonKey =      "rebootRequired";
-    static constexpr const char* _categoryJsonKey =            "category";
-    static constexpr const char* _groupJsonKey =               "group";
-    static constexpr const char* _volatileJsonKey =            "volatile";
+    static const char* _jsonMetaDataDefinesName;
+    static const char* _jsonMetaDataFactsName;
 };
+
+#endif

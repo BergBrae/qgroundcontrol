@@ -1,11 +1,11 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
-import QtQuick.Dialogs
+import QtQuick          2.3
+import QtQuick.Controls 2.4
+import QtQuick.Layouts  1.11
+import QtQuick.Dialogs  1.2
 
-import QGroundControl
-import QGroundControl.Palette
-import QGroundControl.ScreenTools
+import QGroundControl               1.0
+import QGroundControl.Palette       1.0
+import QGroundControl.ScreenTools   1.0
 
 Rectangle {
     height:             visible ? (rowLayout.height + (_margins * 2)) : 0
@@ -15,7 +15,7 @@ Rectangle {
     property var    _logReplayLink: null
 
     function pickLogFile() {
-        if (globals.activeVehicle) {
+        if (mainWindow.activeVehicle) {
             mainWindow.showMessageDialog(qsTr("Log Replay"), qsTr("You must close all connections prior to replaying a log."))
             return
         }
@@ -28,9 +28,11 @@ Rectangle {
     QGCFileDialog {
         id:                 filePicker
         title:              qsTr("Select Telemetery Log")
-        nameFilters:        [ qsTr("Telemetry Logs (*.%1)").arg(_logFileExtension), qsTr("All Files (*)") ]
+        nameFilters:        [qsTr("Telemetry Logs (*.%1)").arg(_logFileExtension), qsTr("All Files (*)")]
+        fileExtension:      _logFileExtension
+        selectExisting:     true
         folder:             QGroundControl.settingsManager.appSettings.telemetrySavePath
-        onAcceptedForLoad: (file) => {
+        onAcceptedForLoad: {
             controller.link = QGroundControl.linkManager.startLogReplay(file)
             close()
         }
@@ -68,10 +70,9 @@ Rectangle {
                 ListElement { text: "1x";   value: 1 }
                 ListElement { text: "2x";   value: 2 }
                 ListElement { text: "5x";   value: 5 }
-                ListElement { text: "10x";  value: 10 }
             }
 
-            onActivated: (index) => { controller.playbackSpeed = model.get(currentIndex).value }
+            onActivated: controller.playbackSpeed = model.get(currentIndex).value
         }
 
         QGCLabel { text: controller.playheadTime }
@@ -104,17 +105,6 @@ Rectangle {
             text:       qsTr("Load Telemetry Log")
             onClicked:  pickLogFile()
             visible:    !controller.link
-        }
-
-        QGCButton {
-            text:       qsTr("Close")
-            onClicked: {
-                var activeVehicle = QGroundControl.multiVehicleManager.activeVehicle
-                if (activeVehicle) {
-                    activeVehicle.closeVehicle()
-                }
-                QGroundControl.settingsManager.flyViewSettings.showLogReplayStatusBar.rawValue = false
-            }
         }
     }
 }

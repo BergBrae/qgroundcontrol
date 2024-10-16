@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -10,9 +10,7 @@
 #pragma once
 
 #include "SimpleMissionItem.h"
-
-class PlanMasterController;
-class MissionSettingsItem;
+#include "MissionSettingsItem.h"
 
 /// Takeoff mission item is a special case of a SimpleMissionItem which supports Launch Location display/editing
 /// which is tied to home position.
@@ -21,15 +19,14 @@ class TakeoffMissionItem : public SimpleMissionItem
     Q_OBJECT
     
 public:
-    // Note: forLoad = true indicates that TakeoffMissionItem::load will be called onthe item
-    TakeoffMissionItem(PlanMasterController* masterController, bool flyView, MissionSettingsItem* settingsItem, bool forLoad);
-    TakeoffMissionItem(MAV_CMD takeoffCmd, PlanMasterController* masterController, bool flyView, MissionSettingsItem* settingsItem, bool forLoad);
-    TakeoffMissionItem(const MissionItem& missionItem,  PlanMasterController* masterController, bool flyView, MissionSettingsItem* settingsItem, bool forLoad);
+    TakeoffMissionItem(Vehicle* vehicle, bool flyView, MissionSettingsItem* settingsItem, bool forLoad, QObject* parent);
+    TakeoffMissionItem(MAV_CMD takeoffCmd, Vehicle* vehicle, bool flyView, MissionSettingsItem* settingsItem, QObject* parent);
+    TakeoffMissionItem(const MissionItem& missionItem,  Vehicle* vehicle, bool flyView, MissionSettingsItem* settingsItem, QObject* parent);
 
     Q_PROPERTY(QGeoCoordinate   launchCoordinate            READ launchCoordinate               WRITE setLaunchCoordinate               NOTIFY launchCoordinateChanged)
     Q_PROPERTY(bool             launchTakeoffAtSameLocation READ launchTakeoffAtSameLocation    WRITE setLaunchTakeoffAtSameLocation    NOTIFY launchTakeoffAtSameLocationChanged)
 
-    QGeoCoordinate  launchCoordinate            (void) const;
+    QGeoCoordinate  launchCoordinate            (void) const { return _settingsItem->coordinate(); }
     bool            launchTakeoffAtSameLocation (void) const { return _launchTakeoffAtSameLocation; }
 
     void setLaunchCoordinate            (const QGeoCoordinate& launchCoordinate);

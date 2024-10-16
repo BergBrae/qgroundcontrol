@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,7 +9,8 @@
 
 #include "FirmwareUpgradeSettings.h"
 
-#include <QtQml/QQmlEngine>
+#include <QQmlEngine>
+#include <QtQml>
 
 DECLARE_SETTINGGROUP(FirmwareUpgrade, "FirmwareUpgrade")
 {

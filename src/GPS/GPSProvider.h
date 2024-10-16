@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -10,15 +10,15 @@
 
 #pragma once
 
+#include <QString>
+#include <QThread>
+#include <QByteArray>
+#include <QSerialPort>
+
+#include <atomic>
 
 #include "GPSPositionMessage.h"
 #include "Drivers/src/gps_helper.h"
-
-#include <QtCore/QString>
-#include <QtCore/QThread>
-#include <QtCore/QByteArray>
-
-class QSerialPort;
 
 
 /**
@@ -84,10 +84,9 @@ private:
     double  _fixedBaseLongitude;
     float   _fixedBaseAltitudeMeters;
     float   _fixedBaseAccuracyMeters;
-    GPSHelper::GPSConfig _gpsConfig{};
 
-	struct sensor_gps_s        _reportGpsPos;
-	struct satellite_info_s    *_pReportSatInfo = nullptr;
+	struct vehicle_gps_position_s	_reportGpsPos;
+	struct satellite_info_s		*_pReportSatInfo = nullptr;
 
 	QSerialPort *_serial = nullptr;
 };

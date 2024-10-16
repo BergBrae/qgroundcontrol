@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -13,25 +13,21 @@
 /// @file
 ///     @author Don Gagne <don@thegagnes.com>
 
-#include <QtCore/QObject>
-#include <QtCore/QStringList>
-#include <QtCore/QTimer>
-#include <QtCore/QLoggingCategory>
+#include <QObject>
+#include <QQuickItem>
+
+#include "UASInterface.h"
+#include "AutoPilotPlugin.h"
+#include "QGCLoggingCategory.h"
 
 Q_DECLARE_LOGGING_CATEGORY(FactPanelControllerLog)
-
-class AutoPilotPlugin;
-class Vehicle;
-class Fact;
 
 /// FactPanelController is used for handling missing Facts from C++ code.
 class FactPanelController : public QObject
 {
     Q_OBJECT
-    Q_MOC_INCLUDE("Vehicle.h")
-    Q_MOC_INCLUDE("Fact.h")
 public:
-    FactPanelController(QObject *parent = nullptr);
+    FactPanelController();
 
     Q_PROPERTY(Vehicle* vehicle MEMBER _vehicle CONSTANT)
 
@@ -54,12 +50,18 @@ protected:
     void _reportMissingParameter(int componentId, const QString& name);
 
     Vehicle*            _vehicle    = nullptr;
+    UASInterface*       _uas        = nullptr;
     AutoPilotPlugin*    _autopilot  = nullptr;
 
 private slots:
     void _checkForMissingParameters(void);
 
 private:
+    void _notifyPanelMissingParameter(const QString& missingParam);
+    void _notifyPanelErrorMsg(const QString& errorMsg);
+    void _showInternalError(const QString& errorMsg);
+
+    QStringList _delayedMissingParams;
     QStringList _missingParameterWaitList;
     QTimer      _missingParametersTimer;
 };

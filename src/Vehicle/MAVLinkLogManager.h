@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -8,19 +8,20 @@
  ****************************************************************************/
 
 
-#pragma once
+#ifndef MAVLinkLogManager_H
+#define MAVLinkLogManager_H
 
-#include "QGCToolbox.h"
+#include <QObject>
+
 #include "QmlObjectListModel.h"
-
-#include <QtCore/QObject>
-#include <QtCore/QLoggingCategory>
+#include "QGCLoggingCategory.h"
+#include "QGCToolbox.h"
+#include "Vehicle.h"
 
 Q_DECLARE_LOGGING_CATEGORY(MAVLinkLogManagerLog)
 
 class QNetworkAccessManager;
 class MAVLinkLogManager;
-class Vehicle;
 
 //-----------------------------------------------------------------------------
 class MAVLinkLogFiles : public QObject
@@ -38,12 +39,12 @@ public:
     Q_PROPERTY(bool         uploaded    READ    uploaded                            NOTIFY uploadedChanged)
 
     QString     name                () { return _name; }
-    quint32     size                () const{ return _size; }
-    bool        selected            () const{ return _selected; }
-    bool        uploading           () const{ return _uploading; }
-    qreal       progress            () const{ return _progress; }
-    bool        writing             () const{ return _writing; }
-    bool        uploaded            () const{ return _uploaded; }
+    quint32     size                () { return _size; }
+    bool        selected            () { return _selected; }
+    bool        uploading           () { return _uploading; }
+    qreal       progress            () { return _progress; }
+    bool        writing             () { return _writing; }
+    bool        uploaded            () { return _uploaded; }
 
     void        setSelected         (bool selected);
     void        setUploading        (bool uploading);
@@ -103,7 +104,7 @@ private:
 class MAVLinkLogManager : public QGCTool
 {
     Q_OBJECT
-    Q_MOC_INCLUDE("QmlObjectListModel.h")
+
 public:
     MAVLinkLogManager    (QGCApplication* app, QGCToolbox* toolbox);
     ~MAVLinkLogManager   ();
@@ -135,14 +136,14 @@ public:
     QString     uploadURL           () { return _uploadURL; }
     QString     feedback            () { return _feedback; }
     QString     videoURL            () { return _videoURL; }
-    bool        enableAutoUpload    () const{ return _enableAutoUpload; }
-    bool        enableAutoStart     () const{ return _enableAutoStart; }
+    bool        enableAutoUpload    () { return _enableAutoUpload; }
+    bool        enableAutoStart     () { return _enableAutoStart; }
     bool        uploading                ();
-    bool        logRunning          () const{ return _logRunning; }
+    bool        logRunning          () { return _logRunning; }
     bool        canStartLog         () { return _vehicle != nullptr && !_logginDenied; }
-    bool        deleteAfterUpload   () const{ return _deleteAfterUpload; }
-    bool        publicLog           () const{ return _publicLog; }
-    int         windSpeed           () const{ return _windSpeed; }
+    bool        deleteAfterUpload   () { return _deleteAfterUpload; }
+    bool        publicLog           () { return _publicLog; }
+    int         windSpeed           () { return _windSpeed; }
     QString     rating              () { return _rating; }
     QString     logExtension        () { return _ulogExtension; }
 
@@ -227,19 +228,6 @@ private:
     QString                 _ulogExtension;
     bool                    _logginDenied;
 
-    static constexpr const char* kMAVLinkLogGroup         = "MAVLinkLogGroup";
-    static constexpr const char* kEmailAddressKey         = "Email";
-    static constexpr const char* kDescriptionsKey         = "Description";
-    static constexpr const char* kDefaultDescr            = "QGroundControl Session";
-    static constexpr const char* kPx4URLKey               = "LogURL";
-    static constexpr const char* kDefaultPx4URL           = "https://logs.px4.io/upload";
-    static constexpr const char* kEnableAutoUploadKey     = "EnableAutoUpload";
-    static constexpr const char* kEnableAutoStartKey      = "EnableAutoStart";
-    static constexpr const char* kEnableDeletetKey        = "EnableDelete";
-    static constexpr const char* kVideoURLKey             = "VideoURL";
-    static constexpr const char* kWindSpeedKey            = "WindSpeed";
-    static constexpr const char* kRateKey                 = "RateKey";
-    static constexpr const char* kPublicLogKey            = "PublicLog";
-    static constexpr const char* kFeedback                = "feedback";
-    static constexpr const char* kVideoURL                = "videoUrl";
 };
+
+#endif

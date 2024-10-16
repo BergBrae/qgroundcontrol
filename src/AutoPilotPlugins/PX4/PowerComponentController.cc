@@ -1,14 +1,22 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
  *
  ****************************************************************************/
 
+
+/// @file
+///     @author Don Gagne <don@thegagnes.com>
+
 #include "PowerComponentController.h"
-#include "Vehicle.h"
+#include "QGCMAVLink.h"
+#include "UAS.h"
+
+#include <QVariant>
+#include <QQmlProperty>
 
 PowerComponentController::PowerComponentController(void)
 {
@@ -18,26 +26,26 @@ PowerComponentController::PowerComponentController(void)
 void PowerComponentController::calibrateEsc(void)
 {
     _warningMessages.clear();
-    connect(_vehicle, &Vehicle::textMessageReceived, this, &PowerComponentController::_handleVehicleTextMessage);
-    _vehicle->startCalibration(QGCMAVLink::CalibrationEsc);
+    connect(_vehicle, &Vehicle::textMessageReceived, this, &PowerComponentController::_handleUASTextMessage);
+    _uas->startCalibration(UASInterface::StartCalibrationEsc);
 }
 
-void PowerComponentController::startBusConfigureActuators(void)
+void PowerComponentController::busConfigureActuators(void)
 {
     _warningMessages.clear();
-    connect(_vehicle, &Vehicle::textMessageReceived, this, &PowerComponentController::_handleVehicleTextMessage);
-    _vehicle->startUAVCANBusConfig();
+    connect(_vehicle, &Vehicle::textMessageReceived, this, &PowerComponentController::_handleUASTextMessage);
+    _uas->startBusConfig(UASInterface::StartBusConfigActuators);
 }
 
 void PowerComponentController::stopBusConfigureActuators(void)
 {
-    disconnect(_vehicle, &Vehicle::textMessageReceived, this, &PowerComponentController::_handleVehicleTextMessage);
-    _vehicle->stopUAVCANBusConfig();
+    disconnect(_vehicle, &Vehicle::textMessageReceived, this, &PowerComponentController::_handleUASTextMessage);
+    _uas->startBusConfig(UASInterface::EndBusConfigActuators);
 }
 
 void PowerComponentController::_stopCalibration(void)
 {
-    disconnect(_vehicle, &Vehicle::textMessageReceived, this, &PowerComponentController::_handleVehicleTextMessage);
+    disconnect(_vehicle, &Vehicle::textMessageReceived, this, &PowerComponentController::_handleUASTextMessage);
 }
 
 void PowerComponentController::_stopBusConfig(void)
@@ -45,9 +53,12 @@ void PowerComponentController::_stopBusConfig(void)
     _stopCalibration();
 }
 
-void PowerComponentController::_handleVehicleTextMessage(int vehicleId, int /* compId */, int /* severity */, QString text)
+void PowerComponentController::_handleUASTextMessage(int uasId, int compId, int severity, QString text)
 {
-    if (vehicleId != _vehicle->id()) {
+    Q_UNUSED(compId);
+    Q_UNUSED(severity);
+    
+    if (uasId != _vehicle->id()) {
         return;
     }
     
@@ -99,12 +110,12 @@ void PowerComponentController::_handleVehicleTextMessage(int vehicleId, int /* c
     QString failedPrefix("calibration failed: ");
     if (text.startsWith(failedPrefix)) {
         QString failureText = text.right(text.length() - failedPrefix.length());
-        _stopCalibration();
         if (failureText.startsWith("Disconnect battery")) {
             emit disconnectBattery();
             return;
         }
         
+        _stopCalibration();
         emit calibrationFailed(text.right(text.length() - failedPrefix.length()));
         return;
     }

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -10,28 +10,31 @@
 #include "CameraSection.h"
 #include "SimpleMissionItem.h"
 #include "FirmwarePlugin.h"
-#include "PlanMasterController.h"
-#include "MissionItem.h"
-#include "Vehicle.h"
-#include "QGCLoggingCategory.h"
 
 QGC_LOGGING_CATEGORY(CameraSectionLog, "CameraSectionLog")
 
+const char* CameraSection::_gimbalPitchName =                   "GimbalPitch";
+const char* CameraSection::_gimbalYawName =                     "GimbalYaw";
+const char* CameraSection::_cameraActionName =                  "CameraAction";
+const char* CameraSection::_cameraPhotoIntervalDistanceName =   "CameraPhotoIntervalDistance";
+const char* CameraSection::_cameraPhotoIntervalTimeName =       "CameraPhotoIntervalTime";
+const char* CameraSection::_cameraModeName =                    "CameraMode";
+
 QMap<QString, FactMetaData*> CameraSection::_metaDataMap;
 
-CameraSection::CameraSection(PlanMasterController* masterController, QObject* parent)
-    : Section                           (masterController, parent)
-    , _available                        (false)
-    , _settingsSpecified                (false)
-    , _specifyGimbal                    (false)
-    , _specifyCameraMode                (false)
+CameraSection::CameraSection(Vehicle* vehicle, QObject* parent)
+    : Section(vehicle, parent)
+    , _available(false)
+    , _settingsSpecified(false)
+    , _specifyGimbal(false)
+    , _specifyCameraMode(false)
     , _gimbalYawFact                    (0, _gimbalYawName,                     FactMetaData::valueTypeDouble)
     , _gimbalPitchFact                  (0, _gimbalPitchName,                   FactMetaData::valueTypeDouble)
     , _cameraActionFact                 (0, _cameraActionName,                  FactMetaData::valueTypeDouble)
     , _cameraPhotoIntervalDistanceFact  (0, _cameraPhotoIntervalDistanceName,   FactMetaData::valueTypeDouble)
     , _cameraPhotoIntervalTimeFact      (0, _cameraPhotoIntervalTimeName,       FactMetaData::valueTypeUint32)
     , _cameraModeFact                   (0, _cameraModeName,                    FactMetaData::valueTypeUint32)
-    , _dirty                            (false)
+    , _dirty(false)
 {
     if (_metaDataMap.isEmpty()) {
         _metaDataMap = FactMetaData::createMapFromJsonFile(QStringLiteral(":/json/CameraSection.FactMetaData.json"), Q_NULLPTR /* metaDataParent */);
@@ -576,7 +579,7 @@ void CameraSection::_cameraActionChanged(void)
 
 bool CameraSection::cameraModeSupported(void) const
 {
-    return _specifyCameraMode || _masterController->controllerVehicle()->firmwarePlugin()->supportedMissionCommands(QGCMAVLink::VehicleClassGeneric).contains(MAV_CMD_SET_CAMERA_MODE);
+    return _specifyCameraMode || _vehicle->firmwarePlugin()->supportedMissionCommands().contains(MAV_CMD_SET_CAMERA_MODE);
 }
 
 void CameraSection::_dirtyIfSpecified(void)

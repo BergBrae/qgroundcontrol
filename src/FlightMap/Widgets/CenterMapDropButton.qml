@@ -7,15 +7,15 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
-import QtPositioning
+import QtQuick          2.3
+import QtQuick.Controls 1.2
+import QtQuick.Layouts  1.2
+import QtPositioning    5.3
 
-import QGroundControl
-import QGroundControl.ScreenTools
-import QGroundControl.Controls
-import QGroundControl.Palette
+import QGroundControl               1.0
+import QGroundControl.ScreenTools   1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.Palette       1.0
 
 DropButton {
     id:                 dropButton
@@ -221,11 +221,11 @@ DropButton {
             QGCButton {
                 text:               qsTr("Vehicle")
                 Layout.fillWidth:   true
-                enabled:            globals.activeVehicle && globals.activeVehicle.latitude != 0 && globals.activeVehicle.longitude != 0 && !followVehicleCheckBox.checked
+                enabled:            activeVehicle && activeVehicle.latitude != 0 && activeVehicle.longitude != 0 && !followVehicleCheckBox.checked
 
                 onClicked: {
                     dropButton.hideDropDown()
-                    map.center = globals.activeVehicle.coordinate
+                    map.center = activeVehicle.coordinate
                 }
             }
 

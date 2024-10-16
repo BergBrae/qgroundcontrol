@@ -7,42 +7,42 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtLocation
-import QtPositioning
+import QtQuick          2.3
+import QtLocation       5.3
+import QtPositioning    5.3
 
-import QGroundControl
-import QGroundControl.Controls
-import QGroundControl.FlightMap
+import QGroundControl           1.0
+import QGroundControl.Controls  1.0
+import QGroundControl.FlightMap 1.0
 
 // Adds visual items associated with the Flight Plan to the map.
 // Currently only used by Fly View even though it's called PlanMapItems!
 Item {
     id: _root
 
-    property var    map                     ///< Map control to show items on
-    property bool   largeMapView            ///< true: map takes up entire view, false: map is in small window
-    property var    planMasterController    ///< Reference to PlanMasterController for vehicle
-    property var    vehicle                 ///< Vehicle associated with these items
+    property var    map                 ///< Map control to show items on
+    property bool   largeMapView        ///< true: map takes up entire view, false: map is in small window
+    property var    masterController    ///< Reference to PlanMasterController for vehicle
+    property var    vehicle             ///< Vehicle associated with these items
 
     property var    _map:                       map
     property var    _vehicle:                   vehicle
-    property var    _missionController:         planMasterController.missionController
-    property var    _geoFenceController:        planMasterController.geoFenceController
-    property var    _rallyPointController:      planMasterController.rallyPointController
-    property var    _guidedController:          globals.guidedControllerFlyView
+    property var    _missionController:         masterController.missionController
+    property var    _geoFenceController:        masterController.geoFenceController
+    property var    _rallyPointController:      masterController.rallyPointController
     property var    _missionLineViewComponent
+    property bool   _isActiveVehicle:           vehicle.active
 
     property string fmode: vehicle.flightMode
 
     // Add the mission item visuals to the map
     Repeater {
-        model: largeMapView ? _missionController.visualItems : 0
+        model: _isActiveVehicle && largeMapView ? _missionController.visualItems : 0
 
         delegate: MissionItemMapVisual {
             map:        _map
             vehicle:    _vehicle
-            onClicked:  _guidedController.confirmAction(_guidedController.actionSetWaypoint, Math.max(object.sequenceNumber, 1))
+            onClicked:  guidedActionsController.confirmAction(guidedActionsController.actionSetWaypoint, Math.max(object.sequenceNumber, 1))
         }
     }
 

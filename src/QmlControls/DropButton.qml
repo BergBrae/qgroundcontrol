@@ -1,9 +1,10 @@
-import QtQuick
-import QtQuick.Controls
+import QtQuick                  2.3
+import QtQuick.Controls         1.2
+import QtQuick.Controls.Styles  1.4
 
-import QGroundControl
-import QGroundControl.ScreenTools
-import QGroundControl.Palette
+import QGroundControl               1.0
+import QGroundControl.ScreenTools   1.0
+import QGroundControl.Palette       1.0
 
 Item {
     id: _root
@@ -40,14 +41,14 @@ Item {
     property real   _viewportMaxTop:    -y + viewportMargins + topMargin
     property real   _viewportMaxBottom: parent.height - (viewportMargins * 2) - y
 
-    // Set up ButtonGroup support. We use the checked property to drive visibility of drop down.
+    // Set up ExclusiveGroup support. We use the checked property to drive visibility of drop down.
 
     property alias checked: roundButton.checked
+    property ExclusiveGroup exclusiveGroup: null
 
-    property ButtonGroup buttonGroup: null
-    onButtonGroupChanged: {
-        if (buttonGroup) {
-            buttonGroup.addButton(_root)
+    onExclusiveGroupChanged: {
+        if (exclusiveGroup) {
+            exclusiveGroup.bindCheckable(_root)
         }
     }
 
@@ -157,7 +158,7 @@ Item {
         }
     }
 
-    QGCRoundButton {
+    RoundButton {
         id:             roundButton
         radius:         parent.width / 2
         onClicked:  {

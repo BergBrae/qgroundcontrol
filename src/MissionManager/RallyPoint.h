@@ -1,18 +1,19 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
  *
  ****************************************************************************/
 
-#pragma once
+#ifndef RallyPoint_H
+#define RallyPoint_H
 
-#include <QtCore/QObject>
-#include <QtPositioning/QGeoCoordinate>
+#include <QObject>
+#include <QGeoCoordinate>
 
-#include "Fact.h"
+#include "FactSystem.h"
 
 /// This class is used to encapsulate the QGeoCoordinate associated with a Rally Point into a QObject such
 /// that it can be used in a QmlObjectListMode for Qml.
@@ -60,7 +61,9 @@ private:
 
     static QMap<QString, FactMetaData*> _metaDataMap;
 
-    static constexpr const char* _longitudeFactName =    "Longitude";
-    static constexpr const char* _latitudeFactName =     "Latitude";
-    static constexpr const char* _altitudeFactName =     "RelativeAltitude";
+    static const char* _longitudeFactName;
+    static const char* _latitudeFactName;
+    static const char* _altitudeFactName;
 };
+
+#endif

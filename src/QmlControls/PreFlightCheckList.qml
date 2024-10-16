@@ -7,13 +7,13 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtQuick.Controls
-import QtQml.Models
+import QtQuick          2.3
+import QtQuick.Controls 1.2
+import QtQml.Models     2.1
 
-import QGroundControl
-import QGroundControl.ScreenTools
-import QGroundControl.Controls
+import QGroundControl               1.0
+import QGroundControl.ScreenTools   1.0
+import QGroundControl.Controls      1.0
 
 Rectangle {
     width:  mainColumn.width + 3*ScreenTools.defaultFontPixelWidth

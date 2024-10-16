@@ -7,10 +7,10 @@
  *
  ****************************************************************************/
 
-import QtQuick
+import QtQuick 2.3
 
-import QGroundControl.Controls
-import QGroundControl.ScreenTools
+import QGroundControl.Controls      1.0
+import QGroundControl.ScreenTools   1.0
 
 Item {
     width:  flightModeLabel.visible ? flightModeLabel.width : flightModeCombo.width
@@ -60,6 +60,6 @@ Item {
             }
         }
 
-        onActivated: (index) => { activeVehicle.flightMode = textAt(index) }
+        onActivated: activeVehicle.flightMode = textAt(index)
     }
 }

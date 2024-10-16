@@ -7,11 +7,11 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtQuick.Controls
+import QtQuick          2.11
+import QtQuick.Controls 2.4
 
-import QGroundControl.ScreenTools
-import QGroundControl.Controls
+import QGroundControl.ScreenTools   1.0
+import QGroundControl.Controls      1.0
 
 Rectangle {
     id:             _root

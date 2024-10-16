@@ -1,14 +1,12 @@
-import QtQuick
+import QtQuick 2.3
 
-import QGroundControl.Palette
-import QGroundControl.ScreenTools
+import QGroundControl.Palette 1.0
 
 /// QGC version of Flickable control that shows horizontal/vertial scroll indicators
 Flickable {
-    id:                     root
-    boundsBehavior:         Flickable.StopAtBounds
-    clip:                   true
-    maximumFlickVelocity:   (ScreenTools.realPixelDensity * 25.4) * 8   // About two inches per second
+    id:             root
+    boundsBehavior: Flickable.StopAtBounds
+    clip:           true
 
     property color indicatorColor: qgcPal.text
 

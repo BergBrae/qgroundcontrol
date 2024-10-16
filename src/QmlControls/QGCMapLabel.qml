@@ -1,8 +1,8 @@
-import QtQuick
-import QtQuick.Controls
+import QtQuick          2.3
+import QtQuick.Controls 1.2
 
-import QGroundControl.Controls
-import QGroundControl.Palette
+import QGroundControl.Controls  1.0
+import QGroundControl.Palette   1.0
 
 /// Text control used for displaying text of Maps
 QGCLabel {

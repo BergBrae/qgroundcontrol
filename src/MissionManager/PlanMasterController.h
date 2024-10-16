@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,41 +9,31 @@
 
 #pragma once
 
-#include <QtCore/QObject>
-#include <QtCore/QLoggingCategory>
+#include <QObject>
 
 #include "MissionController.h"
 #include "GeoFenceController.h"
 #include "RallyPointController.h"
+#include "Vehicle.h"
+#include "MultiVehicleManager.h"
+#include "QGCLoggingCategory.h"
+#include "QmlObjectListModel.h"
 
 Q_DECLARE_LOGGING_CATEGORY(PlanMasterControllerLog)
-
-class QmlObjectListModel;
-class MultiVehicleManager;
-class Vehicle;
 
 /// Master controller for mission, fence, rally
 class PlanMasterController : public QObject
 {
     Q_OBJECT
-    Q_MOC_INCLUDE("QmlObjectListModel.h")
-    Q_MOC_INCLUDE("Vehicle.h")
     
 public:
     PlanMasterController(QObject* parent = nullptr);
-#ifdef QT_DEBUG
-    // Used by test code to create master controller with specific firmware/vehicle type
-    PlanMasterController(MAV_AUTOPILOT firmwareType, MAV_TYPE vehicleType, QObject* parent = nullptr);
-#endif
-
     ~PlanMasterController();
 
-    Q_PROPERTY(bool                     flyView                 MEMBER _flyView)
-    Q_PROPERTY(Vehicle*                 controllerVehicle       READ controllerVehicle                      CONSTANT)                       ///< Offline controller vehicle
-    Q_PROPERTY(Vehicle*                 managerVehicle          READ managerVehicle                         NOTIFY managerVehicleChanged)   ///< Either active vehicle or _controllerVehicle if no active vehicle
     Q_PROPERTY(MissionController*       missionController       READ missionController                      CONSTANT)
     Q_PROPERTY(GeoFenceController*      geoFenceController      READ geoFenceController                     CONSTANT)
     Q_PROPERTY(RallyPointController*    rallyPointController    READ rallyPointController                   CONSTANT)
+    Q_PROPERTY(Vehicle*                 controllerVehicle       MEMBER _controllerVehicle                   CONSTANT)
     Q_PROPERTY(bool                     offline                 READ offline                                NOTIFY offlineChanged)          ///< true: controller is not connected to an active vehicle
     Q_PROPERTY(bool                     containsItems           READ containsItems                          NOTIFY containsItemsChanged)    ///< true: Elemement is non-empty
     Q_PROPERTY(bool                     syncInProgress          READ syncInProgress                         NOTIFY syncInProgressChanged)   ///< true: Information is currently being saved/sent, false: no active save/send in progress
@@ -56,7 +46,7 @@ public:
     Q_PROPERTY(QmlObjectListModel*      planCreators            MEMBER _planCreators                        NOTIFY planCreatorsChanged)
 
     /// Should be called immediately upon Component.onCompleted.
-    Q_INVOKABLE void start(void);
+    Q_INVOKABLE void start(bool flyView);
 
     /// Starts the controller using a single static active vehicle. Will not track global active vehicle changes.
     ///     @param deleteWhenSendCmplete The PlanMasterController object should be deleted after the first send is completed.
@@ -66,9 +56,6 @@ public:
     /// IMPORTANT NOTE: The return value is a VisualMissionItem::ReadForSaveState value. It is an int here to work around
     /// a nightmare of circular header dependency problems.
     Q_INVOKABLE int readyForSaveState(void) const { return _missionController.readyForSaveState(); }
-
-    /// Replaces any current plan with the plan from the manager vehicle even if offline.
-    Q_INVOKABLE void showPlanFromManagerVehicle(void);
 
     /// Sends a plan to the specified file
     ///     @param[in] vehicle Vehicle we are sending a plan to
@@ -100,28 +87,24 @@ public:
     QStringList saveNameFilters (void) const;
     bool        isEmpty         (void) const;
 
-    void        setFlyView(bool flyView) { _flyView = flyView; }
-
     QJsonDocument saveToJson    ();
 
     Vehicle* controllerVehicle(void) { return _controllerVehicle; }
     Vehicle* managerVehicle(void) { return _managerVehicle; }
 
-    static constexpr int   kPlanFileVersion =            1;
-    static constexpr const char* kPlanFileType =               "Plan";
-    static constexpr const char* kJsonMissionObjectKey =       "mission";
-    static constexpr const char* kJsonGeoFenceObjectKey =      "geoFence";
-    static constexpr const char* kJsonRallyPointsObjectKey =   "rallyPoints";
+    static const int    kPlanFileVersion;
+    static const char*  kPlanFileType;
+    static const char*  kJsonMissionObjectKey;
+    static const char*  kJsonGeoFenceObjectKey;
+    static const char*  kJsonRallyPointsObjectKey;
 
 signals:
-    void containsItemsChanged               (bool containsItems);
-    void syncInProgressChanged              (void);
-    void dirtyChanged                       (bool dirty);
-    void offlineChanged                     (bool offlineEditing);
-    void currentPlanFileChanged             (void);
-    void planCreatorsChanged                (QmlObjectListModel* planCreators);
-    void managerVehicleChanged              (Vehicle* managerVehicle);
-    void promptForPlanUsageOnVehicleChange  (void);
+    void containsItemsChanged   (bool containsItems);
+    void syncInProgressChanged  (void);
+    void dirtyChanged           (bool dirty);
+    void offlineChanged  		(bool offlineEditing);
+    void currentPlanFileChanged ();
+    void planCreatorsChanged    (QmlObjectListModel* planCreators);
 
 private slots:
     void _activeVehicleChanged      (Vehicle* activeVehicle);
@@ -132,24 +115,27 @@ private slots:
     void _sendGeoFenceComplete      (void);
     void _sendRallyPointsComplete   (void);
     void _updatePlanCreatorsList    (void);
+#if defined(QGC_AIRMAP_ENABLED)
+    void _startFlightPlanning       (void);
+#endif
 
 private:
-    void _commonInit                (void);
     void _showPlanFromManagerVehicle(void);
 
-    MultiVehicleManager*    _multiVehicleMgr =          nullptr;
-    Vehicle*                _controllerVehicle =        nullptr;    ///< Offline controller vehicle
-    Vehicle*                _managerVehicle =           nullptr;    ///< Either active vehicle or _controllerVehicle if none
-    bool                    _flyView =                  true;
-    bool                    _offline =                  true;
+    MultiVehicleManager*    _multiVehicleMgr;
+    Vehicle*                _controllerVehicle; ///< Offline controller vehicle
+    Vehicle*                _managerVehicle;    ///< Either active vehicle or _controllerVehicle if none
+    bool                    _flyView;
+    bool                    _offline;
     MissionController       _missionController;
     GeoFenceController      _geoFenceController;
     RallyPointController    _rallyPointController;
-    bool                    _loadGeoFence =             false;
-    bool                    _loadRallyPoints =          false;
-    bool                    _sendGeoFence =             false;
-    bool                    _sendRallyPoints =          false;
+    bool                    _loadGeoFence;
+    bool                    _loadRallyPoints;
+    bool                    _sendGeoFence;
+    bool                    _sendRallyPoints;
     QString                 _currentPlanFile;
-    bool                    _deleteWhenSendCompleted =  false;
-    QmlObjectListModel*     _planCreators =             nullptr;
+    bool                    _deleteWhenSendCompleted;
+    QmlObjectListModel*     _planCreators;
+
 };

@@ -1,7 +1,7 @@
-import QtQuick
+import QtQuick 2.3
 
-import QGroundControl.Palette
-import QGroundControl.ScreenTools
+import QGroundControl.Palette       1.0
+import QGroundControl.ScreenTools   1.0
 
 Item {
     id: motorRoot

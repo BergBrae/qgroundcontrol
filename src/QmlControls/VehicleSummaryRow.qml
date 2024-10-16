@@ -1,6 +1,6 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+import QtQuick          2.3
+import QtQuick.Controls 1.2
+import QtQuick.Layouts  1.2
 
 RowLayout {
     property string labelText: "Label"

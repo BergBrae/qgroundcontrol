@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,7 +9,8 @@
 
 #include "PlanViewSettings.h"
 
-#include <QtQml/QQmlEngine>
+#include <QQmlEngine>
+#include <QtQml>
 
 DECLARE_SETTINGGROUP(PlanView, "PlanView")
 {
@@ -18,7 +19,4 @@ DECLARE_SETTINGGROUP(PlanView, "PlanView")
 
 DECLARE_SETTINGSFACT(PlanViewSettings, displayPresetsTabFirst)
 DECLARE_SETTINGSFACT(PlanViewSettings, showMissionItemStatus)
-DECLARE_SETTINGSFACT(PlanViewSettings, useConditionGate)
 DECLARE_SETTINGSFACT(PlanViewSettings, takeoffItemNotRequired)
-DECLARE_SETTINGSFACT(PlanViewSettings, showGimbalOnlyWhenSet)
-DECLARE_SETTINGSFACT(PlanViewSettings, vtolTransitionDistance)

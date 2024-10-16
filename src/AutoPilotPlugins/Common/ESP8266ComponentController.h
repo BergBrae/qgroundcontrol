@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -13,15 +13,17 @@
 ///     @brief  ESP8266 WiFi Config Qml Controller
 ///     @author Gus Grubba <gus@auterion.com>
 
-#pragma once
+#ifndef ESP8266ComponentController_H
+#define ESP8266ComponentController_H
+
+#include <QTimer>
 
 #include "FactPanelController.h"
-
-#include <QtCore/QLoggingCategory>
+#include "UASInterface.h"
+#include "QGCLoggingCategory.h"
+#include "AutoPilotPlugin.h"
 
 Q_DECLARE_LOGGING_CATEGORY(ESP8266ComponentControllerLog)
-
-class Vehicle;
 
 namespace Ui {
     class ESP8266ComponentController;
@@ -30,7 +32,6 @@ namespace Ui {
 class ESP8266ComponentController : public FactPanelController
 {
     Q_OBJECT
-    Q_MOC_INCLUDE("Vehicle.h")
 
 public:
     ESP8266ComponentController      ();
@@ -52,7 +53,7 @@ public:
     Q_INVOKABLE void restoreDefaults();
     Q_INVOKABLE void reboot         ();
 
-    int             componentID     ();
+    int             componentID     () { return MAV_COMP_ID_UDP_BRIDGE; }
     QString         version         ();
     QString         wifiIPAddress   ();
     QString         wifiSSID        ();
@@ -62,7 +63,7 @@ public:
     QStringList     wifiChannels    () { return _channels; }
     QStringList     baudRates       () { return _baudRates; }
     int             baudIndex       ();
-    bool            busy            () const{ return _waitType != WAIT_FOR_NOTHING; }
+    bool            busy            () { return _waitType != WAIT_FOR_NOTHING; }
     Vehicle*        vehicle         () { return _vehicle; }
 
     void        setWifiSSID         (QString id);
@@ -105,3 +106,5 @@ private:
     int         _waitType;
     int         _retries;
 };
+
+#endif // ESP8266ComponentController_H

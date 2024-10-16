@@ -1,13 +1,13 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
-import QtCharts
+import QtQuick                      2.11
+import QtQuick.Controls             2.4
+import QtQuick.Layouts              1.11
+import QtCharts                     2.3
 
-import QGroundControl
-import QGroundControl.Palette
-import QGroundControl.Controls
-import QGroundControl.Controllers
-import QGroundControl.ScreenTools
+import QGroundControl               1.0
+import QGroundControl.Palette       1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.Controllers   1.0
+import QGroundControl.ScreenTools   1.0
 
 ChartView {
     id:                 chartView
@@ -56,7 +56,7 @@ ChartView {
         format:                     "<br/>mm:ss.zzz"
         tickCount:                  5
         gridVisible:                true
-        labelsFont.family:          ScreenTools.fixedFontFamily
+        labelsFont.family:          "Fixed"
         labelsFont.pointSize:       ScreenTools.smallFontPointSize
         labelsColor:                qgcPal.text
     }
@@ -67,7 +67,7 @@ ChartView {
         max:                        chartController ? chartController.rangeYMax : 0
         visible:                    chartController !== null
         lineVisible:                false
-        labelsFont.family:          ScreenTools.fixedFontFamily
+        labelsFont.family:          "Fixed"
         labelsFont.pointSize:       ScreenTools.smallFontPointSize
         labelsColor:                qgcPal.text
     }
@@ -97,7 +97,7 @@ ChartView {
                 height:             ScreenTools.defaultFontPixelHeight
                 model:              controller.timeScales
                 currentIndex:       chartController ? chartController.rangeXIndex : 0
-                onActivated: (index) => { if(chartController) chartController.rangeXIndex = index; }
+                onActivated:        { if(chartController) chartController.rangeXIndex = index; }
                 Layout.alignment:   Qt.AlignVCenter
             }
             QGCLabel {
@@ -110,7 +110,7 @@ ChartView {
                 height:             ScreenTools.defaultFontPixelHeight
                 model:              controller.rangeList
                 currentIndex:       chartController ? chartController.rangeYIndex : 0
-                onActivated: (index) => { if(chartController) chartController.rangeYIndex = index; }
+                onActivated:        { if(chartController) chartController.rangeYIndex = index; }
                 Layout.alignment:   Qt.AlignVCenter
             }
         }

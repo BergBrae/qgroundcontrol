@@ -7,16 +7,16 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtQuick.Controls
-import QtLocation
-import QtPositioning
+import QtQuick          2.3
+import QtQuick.Controls 1.2
+import QtLocation       5.3
+import QtPositioning    5.3
 
-import QGroundControl
-import QGroundControl.ScreenTools
-import QGroundControl.Palette
-import QGroundControl.Controls
-import QGroundControl.FlightMap
+import QGroundControl               1.0
+import QGroundControl.ScreenTools   1.0
+import QGroundControl.Palette       1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.FlightMap     1.0
 
 /// Rally Point map visuals
 Item {
@@ -47,7 +47,7 @@ Item {
         MissionItemIndicatorDrag {
             mapControl:     _root.map
             itemCoordinate: rallyPointObject.coordinate
-            visible:        rallyPointObject === myRallyPointController.currentRallyPoint && _root.interactive
+            visible:        rallyPointObject === myRallyPointController.currentRallyPoint
 
             property var rallyPointObject
 
@@ -63,7 +63,6 @@ Item {
             anchorPoint.x:  sourceItem.anchorPointX
             anchorPoint.y:  sourceItem.anchorPointY
             z:              QGroundControl.zOrderMapItems
-            opacity:        _root.opacity
 
             property var rallyPointObject
 
@@ -85,7 +84,6 @@ Item {
             model: _rallyPoints
 
             delegate: Item {
-                opacity:        _root.opacity
                 property var _visuals: [ ]
 
                 Component.onCompleted: {

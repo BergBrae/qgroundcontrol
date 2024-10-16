@@ -1,8 +1,9 @@
-import QtQuick
-import QtQuick.Controls
-import Qt5Compat.GraphicalEffects
+import QtQuick 2.3
+import QtQuick.Controls 1.2
+import QtQuick.Controls.Styles 1.4
+import QtGraphicalEffects 1.0
 
-import QGroundControl.Palette
+import QGroundControl.Palette 1.0
 
 Item {
     property color color: "white"   // Image color
@@ -15,6 +16,7 @@ Item {
     property alias paintedHeight:       image.paintedHeight
     property alias paintedWidth:        image.paintedWidth
     property alias progress:            image.progress
+    property alias smooth:              image.smooth
     property alias mipmap:              image.mipmap
     property alias source:              image.source
     property alias sourceSize:          image.sourceSize

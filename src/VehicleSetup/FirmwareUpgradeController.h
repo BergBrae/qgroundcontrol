@@ -1,6 +1,6 @@
-﻿/****************************************************************************
+/****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,22 +9,21 @@
 
 #pragma once
 
-#include "QGCSerialPortInfo.h"
+#include "PX4FirmwareUpgradeThread.h"
+#include "LinkManager.h"
+#include "FirmwareImage.h"
+#include "Fact.h"
 
-#include <QtCore/QObject>
-#include <QtCore/QTimer>
-#include <QtGui/QPixmap>
-#include <QtQuick/QQuickItem>
-#ifdef Q_OS_ANDROID
-#include "qserialportinfo.h"
-#else
-#include <QtSerialPort/QSerialPortInfo>
-#endif
+#include <QObject>
+#include <QUrl>
+#include <QTimer>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QPixmap>
+#include <QQuickItem>
+#include <QSerialPort>
 
-class PX4FirmwareUpgradeThread;
-class PX4FirmwareUpgradeThreadController;
-class FirmwareImage;
-class Fact;
+#include <stdint.h>
 
 /// Supported firmware types. If you modify these you will need to update the qml file as well.
 
@@ -37,7 +36,9 @@ public:
         typedef enum {
             AutoPilotStackPX4 = 0,
             AutoPilotStackAPM,
-            SiKRadio,
+            PX4FlowPX4,
+            PX4FlowAPM,
+            ThreeDRRadio,
             SingleFirmwareMode
         } AutoPilotStackType_t;
 
@@ -78,7 +79,7 @@ public:
 
         // members
         AutoPilotStackType_t    autopilotStackType;
-        FirmwareBuildType_t     firmwareType;
+        FirmwareBuildType_t          firmwareType;
         FirmwareVehicleType_t   firmwareVehicleType;
     };
 
@@ -88,8 +89,9 @@ public:
     Q_PROPERTY(bool                 downloadingFirmwareList     MEMBER _downloadingFirmwareList                                     NOTIFY downloadingFirmwareListChanged)
     Q_PROPERTY(QString              boardPort                   READ boardPort                                                      NOTIFY boardFound)
     Q_PROPERTY(QString              boardDescription            READ boardDescription                                               NOTIFY boardFound)
-    Q_PROPERTY(QString              boardType                   MEMBER _boardTypeName                                               NOTIFY boardFound)
+    Q_PROPERTY(QString              boardType                   MEMBER _foundBoardTypeName                                          NOTIFY boardFound)
     Q_PROPERTY(bool                 pixhawkBoard                READ pixhawkBoard                                                   NOTIFY boardFound)
+    Q_PROPERTY(bool                 px4FlowBoard                READ px4FlowBoard                                                   NOTIFY boardFound)
     Q_PROPERTY(FirmwareBuildType_t  selectedFirmwareBuildType   READ selectedFirmwareBuildType  WRITE setSelectedFirmwareBuildType  NOTIFY selectedFirmwareBuildTypeChanged)
     Q_PROPERTY(QStringList          apmFirmwareNames            MEMBER _apmFirmwareNames                                            NOTIFY apmFirmwareNamesChanged)
     Q_PROPERTY(int                  apmFirmwareNamesBestIndex   MEMBER _apmFirmwareNamesBestIndex                                   NOTIFY apmFirmwareNamesChanged)
@@ -132,8 +134,8 @@ public:
     QQuickItem* statusLog(void) { return _statusLog; }
     void setStatusLog(QQuickItem* statusLog) { _statusLog = statusLog; }
     
-    QString boardPort(void) { return _boardInfo.portName(); }
-    QString boardDescription(void) { return _boardInfo.description(); }
+    QString boardPort(void) { return _foundBoardInfo.portName(); }
+    QString boardDescription(void) { return _foundBoardInfo.description(); }
 
     FirmwareBuildType_t selectedFirmwareBuildType(void) { return _selectedFirmwareBuildType; }
     void setSelectedFirmwareBuildType(FirmwareBuildType_t firmwareType);
@@ -142,7 +144,8 @@ public:
     QString     px4StableVersion    (void) { return _px4StableVersion; }
     QString     px4BetaVersion  (void) { return _px4BetaVersion; }
 
-    bool pixhawkBoard(void) const { return _boardType == QGCSerialPortInfo::BoardTypePixhawk; }
+    bool pixhawkBoard(void) const { return _foundBoardType == QGCSerialPortInfo::BoardTypePixhawk; }
+    bool px4FlowBoard(void) const { return _foundBoardType == QGCSerialPortInfo::BoardTypePX4Flow; }
 
     /**
      * @brief Return a human friendly string of available boards
@@ -153,7 +156,6 @@ public:
 
 signals:
     void boardFound                     (void);
-    void showFirmwareSelectDlg          (void);
     void noBoardFound                   (void);
     void boardGone                      (void);
     void flashComplete                  (void);
@@ -166,27 +168,31 @@ signals:
     void downloadingFirmwareListChanged (bool downloadingFirmwareList);
 
 private slots:
-    void _firmwareDownloadProgress          (qint64 curr, qint64 total);
-    void _firmwareDownloadComplete          (QString remoteFile, QString localFile, QString errorMsg);
-    void _foundBoard                        (bool firstAttempt, const QSerialPortInfo& portInfo, int boardType, QString boardName);
-    void _noBoardFound                      (void);
-    void _boardGone                         (void);
-    void _foundBoardInfo                    (int bootloaderVersion, int boardID, int flashSize);
-    void _error                             (const QString& errorString);
-    void _status                            (const QString& statusString);
-    void _bootloaderSyncFailed              (void);
-    void _flashComplete                     (void);
-    void _updateProgress                    (int curr, int total);
-    void _eraseStarted                      (void);
-    void _eraseComplete                     (void);
-    void _eraseProgressTick                 (void);
-    void _px4ReleasesGithubDownloadComplete (QString remoteFile, QString localFile, QString errorMsg);
-    void _ardupilotManifestDownloadComplete (QString remoteFile, QString localFile, QString errorMsg);
-    void _buildAPMFirmwareNames             (void);
+    void _firmwareDownloadProgress(qint64 curr, qint64 total);
+    void _firmwareDownloadFinished(QString remoteFile, QString localFile);
+    void _firmwareDownloadError(QString errorMsg);
+    void _foundBoard(bool firstAttempt, const QSerialPortInfo& portInfo, int boardType, QString boardName);
+    void _noBoardFound(void);
+    void _boardGone();
+    void _foundBootloader(int bootloaderVersion, int boardID, int flashSize);
+    void _error(const QString& errorString);
+    void _status(const QString& statusString);
+    void _bootloaderSyncFailed(void);
+    void _flashComplete(void);
+    void _updateProgress(int curr, int total);
+    void _eraseStarted(void);
+    void _eraseComplete(void);
+    void _eraseProgressTick(void);
+    void _px4ReleasesGithubDownloadFinished(QString remoteFile, QString localFile);
+    void _px4ReleasesGithubDownloadError(QString errorMsg);
+    void _ardupilotManifestDownloadFinished(QString remoteFile, QString localFile);
+    void _ardupilotManifestDownloadError(QString errorMsg);
+    void _buildAPMFirmwareNames(void);
 
 private:
     QHash<FirmwareIdentifier, QString>* _firmwareHashForBoardId(int boardId);
-    void _getFirmwareFile           (FirmwareIdentifier firmwareId);
+    void _getFirmwareFile(FirmwareIdentifier firmwareId);
+    void _initFirmwareHash          (void);
     void _downloadFirmware          (void);
     void _appendStatusLog           (const QString& text, bool critical = false);
     void _errorCancel               (const QString& msg);
@@ -200,7 +206,24 @@ private:
     QString _portDescription;
 
     // Firmware hashes
-    QHash<FirmwareIdentifier, QString> _rgSiKRadioFirmware;
+    QHash<FirmwareIdentifier, QString> _rgFMUV5Firmware;
+    QHash<FirmwareIdentifier, QString> _rgFMUV4PROFirmware;
+    QHash<FirmwareIdentifier, QString> _rgFMUV4Firmware;
+    QHash<FirmwareIdentifier, QString> _rgFMUV3Firmware;
+    QHash<FirmwareIdentifier, QString> _rgPX4FMUV2Firmware;
+    QHash<FirmwareIdentifier, QString> _rgAeroCoreFirmware;
+    QHash<FirmwareIdentifier, QString> _rgAUAVX2_1Firmware;
+    QHash<FirmwareIdentifier, QString> _rgMindPXFMUV2Firmware;
+    QHash<FirmwareIdentifier, QString> _rgTAPV1Firmware;
+    QHash<FirmwareIdentifier, QString> _rgASCV1Firmware;
+    QHash<FirmwareIdentifier, QString> _rgCrazyflie2Firmware;
+    QHash<FirmwareIdentifier, QString> _rgOmnibusF4SDFirmware;
+    QHash<FirmwareIdentifier, QString> _rgKakuteF7Firmware;
+    QHash<FirmwareIdentifier, QString> _rgDurandalV1Firmware;
+    QHash<FirmwareIdentifier, QString> _rgFMUK66V3Firmware;
+    QHash<FirmwareIdentifier, QString> _rgModalFCV1Firmware;
+    QHash<FirmwareIdentifier, QString> _rgPX4FLowFirmware;
+    QHash<FirmwareIdentifier, QString> _rg3DRRadioFirmware;
 
     // Hash map for ArduPilot ChibiOS lookup by board name
     QHash<FirmwareIdentifier, QString> _rgAPMChibiosReplaceNamedBoardFirmware;
@@ -222,6 +245,9 @@ private:
     
     QString _firmwareFilename;      ///< Image which we are going to flash to the board
     
+    QNetworkAccessManager*  _downloadManager;       ///< Used for firmware file downloading across the internet
+    QNetworkReply*          _downloadNetworkReply;  ///< Used for firmware file downloading across the internet
+    
     /// @brief Thread controller which is used to run bootloader commands on separate thread
     PX4FirmwareUpgradeThreadController* _threadController;
     
@@ -238,31 +264,31 @@ private:
     
     bool _searchingForBoard;    ///< true: searching for board, false: search for bootloader
     
-    QSerialPortInfo                 _boardInfo;
-    QGCSerialPortInfo::BoardType_t  _boardType;
-    QString                         _boardTypeName;
+    QSerialPortInfo                 _foundBoardInfo;
+    QGCSerialPortInfo::BoardType_t  _foundBoardType;
+    QString                         _foundBoardTypeName;
 
-    FirmwareBuildType_t             _selectedFirmwareBuildType;
+    FirmwareBuildType_t                  _selectedFirmwareBuildType;
 
-    FirmwareImage*                  _image;
+    FirmwareImage*  _image;
 
     QString _px4StableVersion;  // Version strange for latest PX4 stable
     QString _px4BetaVersion;    // Version strange for latest PX4 beta
 
     const QString _apmBoardDescriptionReplaceText;
 
-    static constexpr const char* _manifestFirmwareJsonKey =               "firmware";
-    static constexpr const char* _manifestBoardIdJsonKey =                "board_id";
-    static constexpr const char* _manifestMavTypeJsonKey =                "mav-type";
-    static constexpr const char* _manifestFormatJsonKey =                 "format";
-    static constexpr const char* _manifestUrlJsonKey =                    "url";
-    static constexpr const char* _manifestMavFirmwareVersionTypeJsonKey = "mav-firmware-version-type";
-    static constexpr const char* _manifestUSBIDJsonKey =                  "USBID";
-    static constexpr const char* _manifestMavFirmwareVersionJsonKey =     "mav-firmware-version";
-    static constexpr const char* _manifestBootloaderStrJsonKey =          "bootloader_str";
-    static constexpr const char* _manifestLatestKey =                     "latest";
-    static constexpr const char* _manifestPlatformKey =                   "platform";
-    static constexpr const char* _manifestBrandNameKey =                  "brand_name";
+    static const char* _manifestFirmwareJsonKey;
+    static const char* _manifestBoardIdJsonKey;
+    static const char* _manifestMavTypeJsonKey;
+    static const char* _manifestFormatJsonKey;
+    static const char* _manifestUrlJsonKey;
+    static const char* _manifestMavFirmwareVersionTypeJsonKey;
+    static const char* _manifestUSBIDJsonKey;
+    static const char* _manifestMavFirmwareVersionJsonKey;
+    static const char* _manifestBootloaderStrJsonKey;
+    static const char* _manifestLatestKey;
+    static const char* _manifestPlatformKey;
+    static const char* _manifestBrandNameKey;
 
     typedef struct {
         uint32_t                boardId;

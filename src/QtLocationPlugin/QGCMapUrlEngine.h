@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -13,52 +13,53 @@
  *  @author Gus Grubba <gus@auterion.com>
  */
 
-#pragma once
+#ifndef QGC_MAP_URL_ENGINE_H
+#define QGC_MAP_URL_ENGINE_H
 
-#include "QGCTileSet.h"
 
-#include <QtCore/QObject>
-#include <QtCore/QByteArrayView>
-#include <QtCore/QStringView>
+#include "GoogleMapProvider.h"
+#include "BingMapProvider.h"
+#include "GenericMapProvider.h"
+#include "EsriMapProvider.h"
+#include "MapboxMapProvider.h"
+#include "ElevationMapProvider.h"
 
-class MapProvider;
-class ElevationProvider;
+#define MAX_MAP_ZOOM (20.0)
 
-class UrlFactory
-{
+class UrlFactory : public QObject {
+    Q_OBJECT
 public:
-    static QString getImageFormat(QStringView type, QByteArrayView image);
-    static QString getImageFormat(int qtMapId, QByteArrayView image);
 
-    static QUrl getTileURL(QStringView type, int x, int y, int zoom);
-    static QUrl getTileURL(int qtMapId, int x, int y, int zoom);
+    UrlFactory      ();
+    ~UrlFactory     ();
 
-    static quint32 averageSizeForType(QStringView type);
+    QNetworkRequest getTileURL          (QString type, int x, int y, int zoom, QNetworkAccessManager* networkManager);
+    QNetworkRequest getTileURL          (int id, int x, int y, int zoom, QNetworkAccessManager* networkManager);
 
-    static bool isElevation(int qtMapId);
+    QString         getImageFormat      (QString type, const QByteArray& image);
+    QString         getImageFormat      (int id , const QByteArray& image);
 
-    static int long2tileX(QStringView mapType, double lon, int z);
-    static int lat2tileY(QStringView mapType, double lat, int z);
+    quint32  averageSizeForType  (QString type);
 
-    static QGCTileSet getTileCount(int zoom, double topleftLon, double topleftLat,
+    int long2tileX(QString mapType, double lon, int z);
+    int lat2tileY(QString mapType, double lat, int z);
+
+    QHash<QString, MapProvider*> getProviderTable(){return _providersTable;}
+
+    int getIdFromType(QString type);
+    QString getTypeFromId(int id);
+
+    QGCTileSet getTileCount(int zoom, double topleftLon, double topleftLat,
                             double bottomRightLon, double bottomRightLat,
-                            QStringView mapType);
+                            QString mapType);
 
-    static const QList<std::shared_ptr<const MapProvider>>& getProviders() { return _providers; }
-    static QStringList getProviderTypes();
-    static int getQtMapIdFromProviderType(QStringView type);
-    static QString getProviderTypeFromQtMapId(int qtMapId);
-    static std::shared_ptr<const MapProvider> getMapProviderFromQtMapId(int qtMapId);
-    static std::shared_ptr<const MapProvider> getMapProviderFromProviderType(QStringView type);
-    static QString providerTypeFromHash(int hash);
+    bool isElevation(int mapId);
 
-    static int hashFromProviderType(QStringView type);
-    static QString tileHashToType(QStringView tileHash);
-    static QString getTileHash(QStringView type, int x, int y, int z);
+  private:
+    int             _timeout;
+    QHash<QString, MapProvider*> _providersTable;
+    void registerProvider(QString Name, MapProvider* provider);
 
-private:
-    static const QList<std::shared_ptr<const MapProvider>> _providers;
 };
 
-typedef std::shared_ptr<const MapProvider> SharedMapProvider;
-typedef std::shared_ptr<const ElevationProvider> SharedElevationProvider;
+#endif

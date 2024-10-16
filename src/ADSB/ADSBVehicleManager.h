@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,49 +9,67 @@
 
 #pragma once
 
-#include <QtCore/QLoggingCategory>
-#include <QtCore/QObject>
+#include "QGCToolbox.h"
+#include "QmlObjectListModel.h"
+#include "ADSBVehicle.h"
 
-#include "ADSB.h"
+#include <QThread>
+#include <QTcpSocket>
+#include <QTimer>
+#include <QGeoCoordinate>
 
-Q_DECLARE_LOGGING_CATEGORY(ADSBVehicleManagerLog)
-
-class ADSBTCPLink;
-class ADSBVehicle;
-class QmlObjectListModel;
-class QTimer;
 class ADSBVehicleManagerSettings;
 
-class ADSBVehicleManager : public QObject
+class ADSBTCPLink : public QThread
 {
     Q_OBJECT
-    Q_MOC_INCLUDE("QmlObjectListModel.h")
-
-    Q_PROPERTY(const QmlObjectListModel *adsbVehicles READ adsbVehicles CONSTANT)
 
 public:
-    ADSBVehicleManager(ADSBVehicleManagerSettings *settings, QObject *parent = nullptr);
-    ~ADSBVehicleManager();
+    ADSBTCPLink(const QString& hostAddress, int port, QObject* parent);
+    ~ADSBTCPLink();
 
-    static ADSBVehicleManager *instance();
+signals:
+    void adsbVehicleUpdate(const ADSBVehicle::VehicleInfo_t vehicleInfo);
+    void error(const QString errorMsg);
 
-    const QmlObjectListModel *adsbVehicles() const { return _adsbVehicles; }
-
-public slots:
-    void adsbVehicleUpdate(const ADSB::VehicleInfo_t &vehicleInfo);
+protected:
+    void run(void) final;
 
 private slots:
-    void _cleanupStaleVehicles();
-    void _linkError(const QString &errorMsg, bool stopped = false);
+    void _readBytes(void);
 
 private:
-    void _start(const QString &hostAddress, quint16 port);
-    void _stop();
+    void _hardwareConnect(void);
+    void _parseLine(const QString& line);
 
-    ADSBVehicleManagerSettings *_adsbSettings = nullptr;
-    QTimer *_adsbVehicleCleanupTimer = nullptr;
-    QmlObjectListModel *_adsbVehicles = nullptr;
+    QString         _hostAddress;
+    int             _port;
+    QTcpSocket*     _socket =   nullptr;
+};
 
-    QMap<uint32_t, ADSBVehicle*> _adsbICAOMap;
-    ADSBTCPLink *_adsbTcpLink = nullptr;
+class ADSBVehicleManager : public QGCTool {
+    Q_OBJECT
+    
+public:
+    ADSBVehicleManager(QGCApplication* app, QGCToolbox* toolbox);
+
+    Q_PROPERTY(QmlObjectListModel* adsbVehicles READ adsbVehicles CONSTANT)
+
+    QmlObjectListModel* adsbVehicles(void) { return &_adsbVehicles; }
+
+    // QGCTool overrides
+    void setToolbox(QGCToolbox* toolbox) final;
+
+public slots:
+    void adsbVehicleUpdate  (const ADSBVehicle::VehicleInfo_t vehicleInfo);
+    void _tcpError          (const QString errorMsg);
+
+private slots:
+    void _cleanupStaleVehicles(void);
+
+private:
+    QmlObjectListModel              _adsbVehicles;
+    QMap<uint32_t, ADSBVehicle*>    _adsbICAOMap;
+    QTimer                          _adsbVehicleCleanupTimer;
+    ADSBTCPLink*                    _tcpLink = nullptr;
 };

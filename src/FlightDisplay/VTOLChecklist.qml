@@ -7,15 +7,17 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtQuick.Controls
-import QtQml.Models
+import QtQuick                      2.11
+import QtQuick.Controls             2.4
+import QtQml.Models                 2.1
 
-import QGroundControl
-import QGroundControl.ScreenTools
-import QGroundControl.Controls
-import QGroundControl.FlightDisplay
-import QGroundControl.Vehicle
+import QGroundControl               1.0
+import QGroundControl.ScreenTools   1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.FlightDisplay 1.0
+import QGroundControl.Vehicle       1.0
+
+import CustomQuickInterface         1.0
 
 Item {
     property var model: listModel
@@ -23,6 +25,31 @@ Item {
         id:     listModel
         PreFlightCheckGroup {
             name: qsTr("VTOL Initial Checks")
+
+            // Standard check list items (group 0) - Available from the start
+            Rectangle {
+                width:      ScreenTools.defaultFontPixelWidth * 40
+                height:     testFlight.height + ScreenTools.defaultFontPixelHeight
+                color:      qgcPal.button
+                property bool   passed: true
+                function reset() {
+                    if(activeVehicle) {
+                        CustomQuickInterface.testFlight = false
+                        activeVehicle.checkListState = Vehicle.CheckListNotSetup
+                    }
+                }
+                QGCCheckBox {
+                    id:             testFlight
+                    text:           "Test Flight"
+                    enabled:        !CustomQuickInterface.debugBuild
+                    checked:        CustomQuickInterface.testFlight
+                    anchors.centerIn: parent
+                    onClicked:      CustomQuickInterface.testFlight = checked
+                    Component.onCompleted: {
+                        CustomQuickInterface.testFlight = false
+                    }
+                }
+            }
 
             PreFlightCheckButton {
                 name:           qsTr("Hardware")

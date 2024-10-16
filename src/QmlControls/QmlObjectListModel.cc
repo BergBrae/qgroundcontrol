@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -13,8 +13,11 @@
 
 #include "QmlObjectListModel.h"
 
-#include <QtCore/QDebug>
-#include <QtQml/QQmlEngine>
+#include <QDebug>
+#include <QQmlEngine>
+
+const int QmlObjectListModel::ObjectRole = Qt::UserRole;
+const int QmlObjectListModel::TextRole = Qt::UserRole + 1;
 
 QmlObjectListModel::QmlObjectListModel(QObject* parent)
     : QAbstractListModel        (parent)
@@ -122,22 +125,6 @@ bool QmlObjectListModel::removeRows(int position, int rows, const QModelIndex& p
     return true;
 }
 
-void QmlObjectListModel::move(int from, int to)
-{
-    if(0 <= from && from < count() && 0 <= to && to < count() && from != to) {
-        // Workaround to allow move item to the bottom. Done according to
-        // beginMoveRows() documentation and implementation specificity:
-        // https://doc.qt.io/qt-5/qabstractitemmodel.html#beginMoveRows
-        // (see 3rd picture explanation there)
-        if(from == to - 1) {
-            to = from++;
-        }
-        beginMoveRows(QModelIndex(), from, from, QModelIndex(), to);
-        _objectList.move(from, to);
-        endMoveRows();
-    }
-}
-
 QObject* QmlObjectListModel::operator[](int index)
 {
     if (index < 0 || index >= _objectList.count()) {
@@ -217,9 +204,9 @@ void QmlObjectListModel::insert(int i, QList<QObject*> objects)
                 QObject::connect(object, SIGNAL(dirtyChanged(bool)), this, SLOT(_childDirtyChanged(bool)));
             }
         }
+        j++;
 
         _objectList.insert(j, object);
-        j++;
     }
 
     insertRows(i, objects.count());

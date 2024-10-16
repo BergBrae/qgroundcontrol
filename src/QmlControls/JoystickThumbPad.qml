@@ -1,9 +1,8 @@
-import QtQuick
-import QtQuick.Controls
+import QtQuick                  2.3
+import QtQuick.Controls         1.2
 
-import QGroundControl
-import QGroundControl.Palette
-import QGroundControl.ScreenTools
+import QGroundControl.Palette       1.0
+import QGroundControl.ScreenTools   1.0
 
 Item {
     id:             _joyRoot
@@ -12,55 +11,22 @@ Item {
     property real   xAxis:                  0                   ///< Value range [-1,1], negative values left stick, positive values right stick
     property real   yAxis:                  0                   ///< Value range [-1,1], negative values down stick, positive values up stick
     property bool   yAxisPositiveRangeOnly: false               ///< true: value range [0,1], false: value range [-1,1]
-    property bool   yAxisReCenter:          false               ///< true: snaps back to center on release, false: stays at current position on release
+    property bool   yAxisReCenter:          true                ///< true: snaps back to center on release, false: stays at current position on release
     property real   xPositionDelta:         0                   ///< Amount to move the control on x axis
     property real   yPositionDelta:         0                   ///< Amount to move the control on y axis
 
     property real   _centerXY:              width / 2
     property bool   _processTouchPoints:    false
-    property color  _fgColor:               QGroundControl.globalPalette.text
-    property color  _bgColor:               QGroundControl.globalPalette.window
-    property real   _hatWidth:              ScreenTools.defaultFontPixelHeight
-    property real   _hatWidthHalf:          _hatWidth / 2
-    property bool   calculateYAxisMutex:    true
     property real   stickPositionX:         _centerXY
-    property real   stickPositionY:         !yAxisReCenter ? height : height / 2
-    property bool   alredyCreated:          false
-    
+    property real   stickPositionY:         yAxisReCenter ? _centerXY : height
+
     QGCMapPalette { id: mapPal }
 
+    onWidthChanged:                     calculateXAxis()
     onStickPositionXChanged:            calculateXAxis()
+    onHeightChanged:                    calculateYAxis()
     onStickPositionYChanged:            calculateYAxis()
     onYAxisPositiveRangeOnlyChanged:    calculateYAxis()
-    onYAxisReCenterChanged:             yAxisReCentered()     
-    
-    function yAxisReCentered() {
-        if( yAxisReCenter ) {
-            yAxis = yAxisPositiveRangeOnly ? 0.5 : 0
-            stickPositionY = _joyRoot.height / 2
-        }
-        if( !alredyCreated && !yAxisReCenter ) {
-            yAxis = yAxisPositiveRangeOnly ? 0 : -1
-            stickPositionY = _joyRoot.height            
-        }
-        if ( alredyCreated && !yAxisReCenter ){
-            yAxis = yAxisPositiveRangeOnly ? 0.5 : 0
-            stickPositionY = _joyRoot.height / 2
-        }
-        alredyCreated = true
-        return yAxis
-    }
-
-    //We prevent Joystick to move while the screen is resizing 
-    function resize( yPositionAfterResize ) {
-        if(_joyRoot.height <= 0) {
-            return;
-        }
-        calculateYAxisMutex = false
-        stickPositionY = ( 1 - ( ( yPositionAfterResize + ( !yAxisPositiveRangeOnly ? 1 : 0) ) /  ( yAxisPositiveRangeOnly ? 1 : 2 ) )) * _joyRoot.height // Reverse the CalculateYAxis Procedure
-        stickPositionX = _joyRoot.width / 2 // Manual recenter
-        calculateYAxisMutex = true
-    }
 
     function calculateXAxis() {
         if(!_joyRoot.visible) {
@@ -76,9 +42,6 @@ Item {
         if(!_joyRoot.visible) {
             return;
         }
-        if(!calculateYAxisMutex) {
-            return;
-        }
         var fullRange = yAxisPositiveRangeOnly ? 1 : 2
         var pctUp = 1.0 - (stickPositionY / height)
         var rangeUp = pctUp * fullRange
@@ -90,7 +53,7 @@ Item {
 
     function reCenter() {
         _processTouchPoints = false
-        _centerXY = _joyRoot.width / 2 // Reload before using it to make sure of using the right value
+
         // Move control back to original position
         xPositionDelta = 0
         yPositionDelta = 0
@@ -104,23 +67,7 @@ Item {
 
     function thumbDown(touchPoints) {
         // Position the control around the initial thumb position
-        _centerXY = _joyRoot.width / 2  // make sure to know the correct center of the item
-
-        var limitOffset = uiRealX >= _joyRoot.width / 2 ? true : false // as the joystick become small the UI too so we limit the maxOffset for reCentering joystick to prevent misclicks
-        var maxDelta = _joyRoot.x > uiTotalWidth / 2  ? uiTotalWidth - uiRealX - _joyRoot.x - _centerXY : uiRealX
-        var isRightJoystick = _joyRoot.x > uiTotalWidth / 2 ? true : false
-
-        // Check if new xDelta will make joystick to be beyond screen boundaries or can cause a misclick
-        if (!limitOffset && isRightJoystick && touchPoints[0].x  <= maxDelta || !limitOffset && !isRightJoystick && touchPoints[0].x >= maxDelta) {
-            xPositionDelta = touchPoints[0].x - _centerXY
-        } else if (limitOffset && !isRightJoystick && touchPoints[0].x >= _centerXY * 0.25 && touchPoints[0].x <= _centerXY * 2) { // more offset at the side near to the center
-            xPositionDelta = touchPoints[0].x - _centerXY
-        } else if (limitOffset && isRightJoystick && touchPoints[0].x >= 0 && touchPoints[0].x <= _centerXY * 1.75) {
-            xPositionDelta = touchPoints[0].x - _centerXY
-        } else {
-            return;
-        }
-
+        xPositionDelta = touchPoints[0].x - _centerXY
         if (yAxisPositiveRangeOnly) {
             yPositionDelta = touchPoints[0].y - stickPositionY
         } else {
@@ -140,37 +87,13 @@ Item {
 
     Image {
         anchors.fill:       parent
-        source:             "/res/JoystickBezelLight.png"
+        source:             lightColors ? "/res/JoystickBezel.png" : "/res/JoystickBezelLight.png"
         mipmap:             true
         smooth:             true
     }
 
-    Rectangle {
-        anchors.fill:       parent
-        radius:             width / 2
-        color:              _bgColor
-        opacity:            0.5
-
-        Rectangle {
-            anchors.margins:    parent.width / 4
-            anchors.fill:       parent
-            radius:             width / 2
-            border.color:       _fgColor
-            border.width:       2
-            color:              "transparent"
-        }
-
-        Rectangle {
-            anchors.fill:       parent
-            radius:             width / 2
-            border.color:       _fgColor
-            border.width:       2
-            color:              "transparent"
-        }
-    }
-
     QGCColoredImage {
-        color:                      _fgColor
+        color:                      lightColors ? "white" : "black"
         visible:                    yAxisPositiveRangeOnly
         height:                     ScreenTools.defaultFontPixelHeight
         width:                      height
@@ -184,7 +107,7 @@ Item {
     }
 
     QGCColoredImage {
-        color:                      _fgColor
+        color:                      lightColors ? "white" : "black"
         visible:                    yAxisPositiveRangeOnly
         height:                     ScreenTools.defaultFontPixelHeight
         width:                      height
@@ -198,7 +121,7 @@ Item {
     }
 
     QGCColoredImage {
-        color:                      _fgColor
+        color:                      lightColors ? "white" : "black"
         visible:                    yAxisPositiveRangeOnly
         height:                     ScreenTools.defaultFontPixelHeight
         width:                      height
@@ -212,7 +135,7 @@ Item {
     }
 
     QGCColoredImage {
-        color:                      _fgColor
+        color:                      lightColors ? "white" : "black"
         visible:                    yAxisPositiveRangeOnly
         height:                     ScreenTools.defaultFontPixelHeight
         width:                      height
@@ -226,14 +149,34 @@ Item {
     }
 
     Rectangle {
-        width:          _hatWidth
-        height:         _hatWidth
-        radius:         _hatWidthHalf
-        border.color:   _fgColor
-        border.width:   1
-        color:          Qt.rgba(_fgColor.r, _fgColor.g, _fgColor.b, 0.5)
-        x:              stickPositionX - _hatWidthHalf
-        y:              stickPositionY - _hatWidthHalf
+        anchors.margins:    parent.width / 4
+        anchors.fill:       parent
+        radius:             width / 2
+        border.color:       mapPal.thumbJoystick
+        border.width:       2
+        color:              Qt.rgba(0,0,0,0)
+    }
+
+    Rectangle {
+        anchors.fill:       parent
+        radius:             width / 2
+        border.color:       mapPal.thumbJoystick
+        border.width:       2
+        color:              Qt.rgba(0,0,0,0)
+    }
+
+    Rectangle {
+        width:  hatWidth
+        height: hatWidth
+        radius: hatWidthHalf
+        border.color: lightColors ? "white" : "black"
+        border.width: 1
+        color:  mapPal.thumbJoystick
+        x:      stickPositionX - hatWidthHalf
+        y:      stickPositionY - hatWidthHalf
+
+        readonly property real hatWidth:        ScreenTools.defaultFontPixelHeight
+        readonly property real hatWidthHalf:    ScreenTools.defaultFontPixelHeight / 2
     }
 
     Connections {
@@ -252,12 +195,11 @@ Item {
     }
 
     MultiPointTouchArea {
-        anchors.fill:           parent
-        anchors.bottomMargin:   yAxisReCenter ? 0 : -_hatWidthHalf
-        minimumTouchPoints:     1
-        maximumTouchPoints:     1
-        touchPoints:            [ TouchPoint { id: touchPoint } ]
-        onPressed:              touchPoints => _joyRoot.thumbDown(touchPoints)
-        onReleased:             _joyRoot.reCenter()
+        anchors.fill:       parent
+        minimumTouchPoints: 1
+        maximumTouchPoints: 1
+        touchPoints:        [ TouchPoint { id: touchPoint } ]
+        onPressed:          _joyRoot.thumbDown(touchPoints)
+        onReleased:         _joyRoot.reCenter()
     }
 }

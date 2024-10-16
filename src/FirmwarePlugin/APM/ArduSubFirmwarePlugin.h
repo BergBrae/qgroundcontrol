@@ -1,12 +1,3 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
 /*=====================================================================
 
  QGroundControl Open Source Ground Control Station
@@ -33,11 +24,10 @@
 /// @file
 ///     @author Rustom Jehangir <rusty@bluerobotics.com>
 
-#pragma once
+#ifndef ArduSubFirmwarePlugin_H
+#define ArduSubFirmwarePlugin_H
 
 #include "APMFirmwarePlugin.h"
-#include "FactGroup.h"
-
 class APMSubmarineFactGroup : public FactGroup
 {
     Q_OBJECT
@@ -52,7 +42,6 @@ public:
     Q_PROPERTY(Fact* pilotGain           READ pilotGain           CONSTANT)
     Q_PROPERTY(Fact* inputHold           READ inputHold     CONSTANT)
     Q_PROPERTY(Fact* rangefinderDistance READ rangefinderDistance CONSTANT)
-    Q_PROPERTY(Fact* rangefinderTarget   READ rangefinderTarget CONSTANT)
 
     Fact* camTilt             (void) { return &_camTiltFact; }
     Fact* tetherTurns         (void) { return &_tetherTurnsFact; }
@@ -61,7 +50,6 @@ public:
     Fact* pilotGain           (void) { return &_pilotGainFact; }
     Fact* inputHold           (void) { return &_inputHoldFact; }
     Fact* rangefinderDistance (void) { return &_rangefinderDistanceFact; }
-    Fact* rangefinderTarget   (void) { return &_rangefinderTargetFact; }
 
     static const char* _camTiltFactName;
     static const char* _tetherTurnsFactName;
@@ -69,9 +57,7 @@ public:
     static const char* _lightsLevel2FactName;
     static const char* _pilotGainFactName;
     static const char* _inputHoldFactName;
-    static const char* _rollPitchToggleFactName;
     static const char* _rangefinderDistanceFactName;
-    static const char* _rangefinderTargetFactName;
 
     static const char* _settingsGroup;
 
@@ -82,9 +68,7 @@ private:
     Fact            _lightsLevel2Fact;
     Fact            _pilotGainFact;
     Fact            _inputHoldFact;
-    Fact            _rollPitchToggleFact;
     Fact            _rangefinderDistanceFact;
-    Fact            _rangefinderTargetFact;
 };
 
 class APMSubMode : public APMCustomMode
@@ -112,7 +96,6 @@ public:
         RESERVED_18       = 18,
         MANUAL            = 19,
         MOTORDETECTION    = 20,
-        SURFTRAK          = 21,  // Surface (seafloor) tracking, aka hold range
     };
 
     APMSubMode(uint32_t mode, bool settable);
@@ -124,6 +107,8 @@ class ArduSubFirmwarePlugin : public APMFirmwarePlugin
 
 public:
     ArduSubFirmwarePlugin(void);
+
+    QList<MAV_CMD> supportedMissionCommands(void) final;
 
     int defaultJoystickTXMode(void) final { return 3; }
 
@@ -149,16 +134,14 @@ public:
     QString brandImageOutdoor(const Vehicle* vehicle) const final { Q_UNUSED(vehicle); return QStringLiteral("/qmlimages/APM/BrandImageSub"); }
     const FirmwarePlugin::remapParamNameMajorVersionMap_t& paramNameRemapMajorVersionMap(void) const final { return _remapParamName; }
     int remapParamNameHigestMinorVersionNumber(int majorVersionNumber) const final;
-    const QVariantList& toolIndicators(const Vehicle* vehicle) final;
-    const QVariantList& modeIndicators(const Vehicle* vehicle) final;
+    const QVariantList& toolBarIndicators(const Vehicle* vehicle) final;
     bool  adjustIncomingMavlinkMessage(Vehicle* vehicle, mavlink_message_t* message) final;
     virtual QMap<QString, FactGroup*>* factGroups(void) final;
     void adjustMetaData(MAV_TYPE vehicleType, FactMetaData* metaData) override final;
 
 
 private:
-    QVariantList _toolIndicators;
-    QVariantList _modeIndicators;
+    QVariantList _toolBarIndicators;
     static bool _remapParamNameIntialized;
     QMap<QString, QString> _factRenameMap;
     static FirmwarePlugin::remapParamNameMajorVersionMap_t  _remapParamName;
@@ -168,3 +151,4 @@ private:
     QMap<QString, FactGroup*> _nameToFactGroupMap;
     APMSubmarineFactGroup _infoFactGroup;
 };
+#endif

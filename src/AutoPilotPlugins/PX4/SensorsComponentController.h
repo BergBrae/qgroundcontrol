@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -11,12 +11,15 @@
 /// @file
 ///     @author Don Gagne <don@thegagnes.com>
 
-#pragma once
+#ifndef SENSORSCOMPONENTCONTROLLER_H
+#define SENSORSCOMPONENTCONTROLLER_H
 
-#include <QtQuick/QQuickItem>
-#include <QtCore/QLoggingCategory>
+#include <QObject>
+#include <QQuickItem>
 
+#include "UASInterface.h"
 #include "FactPanelController.h"
+#include "QGCLoggingCategory.h"
 
 Q_DECLARE_LOGGING_CATEGORY(SensorsComponentControllerLog)
 
@@ -79,7 +82,6 @@ public:
     Q_INVOKABLE void calibrateAirspeed(void);
     Q_INVOKABLE void cancelCalibration(void);
     Q_INVOKABLE bool usingUDPLink(void);
-    Q_INVOKABLE void resetFactoryParameters();
     
 signals:
     void showGyroCalAreaChanged(void);
@@ -94,7 +96,6 @@ signals:
 
 private slots:
     void _handleUASTextMessage(int uasId, int compId, int severity, QString text);
-    void _handleParametersReset(bool success);
     
 private:
     void _startLogCalibration(void);
@@ -166,3 +167,5 @@ private:
     
     static const int _supportedFirmwareCalVersion = 2;
 };
+
+#endif

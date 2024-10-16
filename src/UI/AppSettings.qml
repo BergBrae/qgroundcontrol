@@ -8,14 +8,14 @@
  ****************************************************************************/
 
 
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+import QtQuick          2.3
+import QtQuick.Controls 1.2
+import QtQuick.Layouts  1.2
 
-import QGroundControl
-import QGroundControl.Palette
-import QGroundControl.Controls
-import QGroundControl.ScreenTools
+import QGroundControl               1.0
+import QGroundControl.Palette       1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.ScreenTools   1.0
 
 Rectangle {
     id:     settingsView
@@ -30,32 +30,12 @@ Rectangle {
 
     property bool _first: true
 
-    property bool _commingFromRIDSettings:  false
-
-    function showSettingsPage(settingsPage) {
-        for (var i=0; i<buttonRepeater.count; i++) {
-            var button = buttonRepeater.itemAt(i)
-            if (button.text === settingsPage) {
-                button.clicked()
-                break
-            }
-        }
-    }
-
     QGCPalette { id: qgcPal }
 
     Component.onCompleted: {
         //-- Default Settings
-        if (globals.commingFromRIDIndicator) {
-            rightPanel.source = "qrc:/qml/RemoteIDSettings.qml"
-            globals.commingFromRIDIndicator = false
-        } else {
-            rightPanel.source =  "/qml/GeneralSettings.qml"
-        }
+        __rightPanel.source = QGroundControl.corePlugin.settingsPages[QGroundControl.corePlugin.defaultSettings].url
     }
-
-
-    SettingsPagesModel { id: settingsPagesModel }
 
     QGCFlickable {
         id:                 buttonList
@@ -69,73 +49,44 @@ Rectangle {
         flickableDirection: Flickable.VerticalFlick
         clip:               true
 
+        ExclusiveGroup { id: panelActionGroup }
+
         ColumnLayout {
             id:         buttonColumn
-            spacing:    ScreenTools.defaultFontPixelHeight / 4
+            spacing:    _verticalMargin
 
             property real _maxButtonWidth: 0
 
+            QGCLabel {
+                Layout.fillWidth:       true
+                text:                   qsTr("Application Settings")
+                wrapMode:               Text.WordWrap
+                horizontalAlignment:    Text.AlignHCenter
+                visible:                !ScreenTools.isShortScreen
+            }
+
             Repeater {
-                id:     buttonRepeater
-                model:  settingsPagesModel
-
-                Button {
+                model:  QGroundControl.corePlugin.settingsPages
+                QGCButton {
+                    height:             _buttonHeight
+                    text:               modelData.title
+                    exclusiveGroup:     panelActionGroup
                     Layout.fillWidth:   true
-                    text:               name
-                    padding:            ScreenTools.defaultFontPixelWidth / 2
-                    hoverEnabled:       !ScreenTools.isMobile
-                    autoExclusive:      true
-                    icon.source:        iconUrl
-                    visible:            pageVisible()
-
-                    background: Rectangle {
-                        color:      qgcPal.buttonHighlight
-                        opacity:    checked || pressed ? 1 : enabled && hovered ? .2 : 0
-                        radius:     ScreenTools.defaultFontPixelWidth / 2
-                    }
-
-                    contentItem: RowLayout {
-                        spacing: ScreenTools.defaultFontPixelWidth
-
-                        QGCColoredImage {
-                            source: iconUrl
-                            color:  displayText.color
-                            width:  ScreenTools.defaultFontPixelHeight
-                            height: ScreenTools.defaultFontPixelHeight
-                        }
-
-                        QGCLabel {
-                            id:                     displayText
-                            Layout.fillWidth:       true
-                            text:                   name
-                            color:                  checked || pressed ? qgcPal.buttonHighlightText : qgcPal.buttonText
-                            horizontalAlignment:    QGCLabel.AlignLeft
-                        }
-                    }
 
                     onClicked: {
-                        if (mainWindow.allowViewSwitch()) {
-                            if (rightPanel.source !== url) {
-                                rightPanel.source = url
-                            }
-                            checked = true
+                        if (mainWindow.preventViewSwitch()) {
+                            return
                         }
+                        if (__rightPanel.source !== modelData.url) {
+                            __rightPanel.source = modelData.url
+                        }
+                        checked = true
                     }
 
                     Component.onCompleted: {
-                        if (globals.commingFromRIDIndicator) {
-                            _commingFromRIDSettings = true
-                        }
                         if(_first) {
                             _first = false
                             checked = true
-                        }
-                        if (_commingFromRIDSettings) {
-                            checked = false
-                            _commingFromRIDSettings = false
-                            if (modelData.url == "/qml/RemoteIDSettings.qml") {
-                                checked = true
-                            }
                         }
                     }
                 }
@@ -157,7 +108,7 @@ Rectangle {
 
     //-- Panel Contents
     Loader {
-        id:                     rightPanel
+        id:                     __rightPanel
         anchors.leftMargin:     _horizontalMargin
         anchors.rightMargin:    _horizontalMargin
         anchors.topMargin:      _verticalMargin

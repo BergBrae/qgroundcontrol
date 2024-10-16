@@ -7,27 +7,25 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
-import QtQuick.Dialogs
-import QtQuick.Window
-import QtCharts
+import QtQuick                      2.11
+import QtQuick.Controls             2.4
+import QtQuick.Layouts              1.11
+import QtQuick.Dialogs              1.3
+import QtQuick.Window               2.2
+import QtCharts                     2.3
 
-import QGroundControl
-import QGroundControl.Palette
-import QGroundControl.Controls
-import QGroundControl.Controllers
-import QGroundControl.ScreenTools
+import QGroundControl               1.0
+import QGroundControl.Palette       1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.Controllers   1.0
+import QGroundControl.ScreenTools   1.0
 
 AnalyzePage {
-    id: root
     headerComponent:    headerComponent
     pageComponent:      pageComponent
-    allowPopout:        true
 
-    property var    curSystem:          controller ? controller.activeSystem : null
-    property var    curMessage:         curSystem && curSystem.messages.count ? curSystem.messages.get(curSystem.selected) : null
+    property var    curVehicle:         controller ? controller.activeVehicle : null
+    property var    curMessage:         curVehicle && curVehicle.messages.count ? curVehicle.messages.get(curVehicle.selected) : null
     property int    curCompID:          0
     property real   maxButtonWidth:     0
 
@@ -47,39 +45,21 @@ AnalyzePage {
             }
             RowLayout {
                 Layout.alignment:   Qt.AlignRight
-                visible:            curSystem ? controller.systemNames.length > 1 || curSystem.compIDsStr.length > 2 : false
-                QGCComboBox {
-                    id:             systemCombo
-                    model:          controller.systemNames
-                    sizeToContents: true
-                    visible:        controller.systemNames.length > 1
-                    onActivated: (index) =>  { controller.setActiveSystem(controller.systems.get(index).id) }
-
-                    Connections {
-                        target: controller
-                        onActiveSystemChanged: {
-                            for (var systemIndex=0; systemIndex<controller.systems.count; systemIndex++) {
-                                if (controller.systems.get(systemIndex) == curSystem) {
-                                    systemCombo.currentIndex = systemIndex
-                                    curCompID = 0
-                                    cidCombo.currentIndex = 0
-                                    break
-                                }
-                            }
-                        }
-                    }
+                visible:            curVehicle ? curVehicle.compIDsStr.length > 2 : false
+                QGCLabel {
+                    text:           qsTr("Component ID:")
                 }
                 QGCComboBox {
                     id:             cidCombo
-                    model:          curSystem ? curSystem.compIDsStr : []
-                    sizeToContents: true
-                    visible:        curSystem ? curSystem.compIDsStr.length > 2 : false
-                    onActivated: (index) => {
-                        if(curSystem && curSystem.compIDsStr.length > 1) {
+                    model:          curVehicle ? curVehicle.compIDsStr : []
+                    Layout.minimumWidth: ScreenTools.defaultFontPixelWidth * 10
+                    currentIndex:   0
+                    onActivated: {
+                        if(curVehicle && curVehicle.compIDsStr.length > 1) {
                             if(index < 1)
                                 curCompID = 0
                             else
-                                curCompID = curSystem.compIDs[index - 1]
+                                curCompID = curVehicle.compIDs[index - 1]
                         }
                     }
                 }
@@ -107,15 +87,15 @@ AnalyzePage {
                     anchors.right:  parent.right
                     spacing:        ScreenTools.defaultFontPixelHeight * 0.25
                     Repeater {
-                        model:      curSystem ? curSystem.messages : []
+                        model:      curVehicle ? curVehicle.messages : []
                         delegate:   MAVLinkMessageButton {
                             text:       object.name + (object.fieldSelected ?  " *" : "")
-                            compID:     object.compId
-                            checked:    curSystem ? (curSystem.selected === index) : false
-                            messageHz:  object.actualRateHz
+                            compID:     object.cid
+                            checked:    curVehicle ? (curVehicle.selected === index) : false
+                            messageHz:  object.messageHz
                             visible:    curCompID === 0 || curCompID === compID
                             onClicked: {
-                                curSystem.selected = index
+                                curVehicle.selected = index
                             }
                             Layout.fillWidth: true
                         }
@@ -125,7 +105,7 @@ AnalyzePage {
             //-- Message Data
             QGCFlickable {
                 id:                 messageGrid
-                visible:            curMessage !== null && (curCompID === 0 || curCompID === curMessage.compId)
+                visible:            curMessage !== null && (curCompID === 0 || curCompID === curMessage.cid)
                 flickableDirection: Flickable.VerticalFlick
                 width:              parent.width - buttonGrid.width - ScreenTools.defaultFontPixelWidth
                 height:             parent.height
@@ -140,63 +120,24 @@ AnalyzePage {
                         columnSpacing:  ScreenTools.defaultFontPixelWidth
                         rowSpacing:     ScreenTools.defaultFontPixelHeight * 0.25
                         QGCLabel {
-                            text: qsTr("Message:")
+                            text:       qsTr("Message:")
                             Layout.minimumWidth: ScreenTools.defaultFontPixelWidth * 20
                         }
                         QGCLabel {
-                            color: qgcPal.buttonHighlight
-                            text: curMessage ? curMessage.name + ' (' + curMessage.id + ')' : ""
+                            color:      qgcPal.buttonHighlight
+                            text:       curMessage ? curMessage.name + ' (' + curMessage.id + ') ' + curMessage.messageHz.toFixed(1) + 'Hz' : ""
                         }
-
-                        QGCLabel { text: qsTr("Component:") }
-                        QGCLabel { text: curMessage ? curMessage.compId : "" }
-
-                        QGCLabel { text: qsTr("Count:") }
-                        QGCLabel { text: curMessage ? curMessage.count : "" }
-
-                        QGCLabel { text: qsTr("Actual Rate:") }
-                        QGCLabel { text: curMessage ? curMessage.actualRateHz.toFixed(1) + qsTr("Hz") : "" }
-
-                        QGCLabel { text: qsTr("Set Rate:") }
-                        QGCComboBox {
-                            id: msgRateCombo
-                            textRole: "text"
-                            valueRole: "value"
-                            model: [
-                                { value: -1, text: qsTr("Disabled") },
-                                { value: 0, text: qsTr("Default") },
-                                { value: 1, text: qsTr("1Hz") },
-                                { value: 2, text: qsTr("2Hz") },
-                                { value: 3, text: qsTr("3Hz") },
-                                { value: 4, text: qsTr("4Hz") },
-                                { value: 5, text: qsTr("5Hz") },
-                                { value: 6, text: qsTr("6Hz") },
-                                { value: 7, text: qsTr("7Hz") },
-                                { value: 8, text: qsTr("8Hz") },
-                                { value: 9, text: qsTr("9Hz") },
-                                { value: 10, text: qsTr("10Hz") },
-                                { value: 25, text: qsTr("25Hz") },
-                                { value: 50, text: qsTr("50Hz") },
-                                { value: 100, text: qsTr("100Hz") }
-                            ]
-                            Layout.alignment: Qt.AlignLeft
-                            sizeToContents: true
-                            Component.onCompleted: reset()
-                            onActivated: (index) => controller.setMessageInterval(currentValue)
-                            function reset() { currentIndex = indexOfValue(0) }
-                            Connections {
-                                target: root
-                                function onCurMessageChanged() { msgRateCombo.reset() }
-                            }
-                            Connections {
-                                target: curMessage
-                                function onTargetRateHzChanged() {
-                                    const target_index = indexOfValue(curMessage.targetRateHz)
-                                    if(target_index != -1) {
-                                        currentIndex = target_index
-                                    }
-                                }
-                            }
+                        QGCLabel {
+                            text:       qsTr("Component:")
+                        }
+                        QGCLabel {
+                            text:       curMessage ? curMessage.cid : ""
+                        }
+                        QGCLabel {
+                            text:       qsTr("Count:")
+                        }
+                        QGCLabel {
+                            text:       curMessage ? curMessage.count : ""
                         }
                     }
                     Item { height: ScreenTools.defaultFontPixelHeight; width: 1 }

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,14 +9,10 @@
 
 
 #include "GPSManager.h"
-#include "GPSProvider.h"
+#include "QGCLoggingCategory.h"
 #include "QGCApplication.h"
 #include "SettingsManager.h"
 #include "RTKSettings.h"
-#include "GPSRTKFactGroup.h"
-#include "RTCMMavlink.h"
-#include "QGCLoggingCategory.h"
-
 
 GPSManager::GPSManager(QGCApplication* app, QGCToolbox* toolbox)
     : QGCTool(app, toolbox)
@@ -28,47 +24,6 @@ GPSManager::GPSManager(QGCApplication* app, QGCToolbox* toolbox)
 GPSManager::~GPSManager()
 {
     disconnectGPS();
-
-    delete _gpsRtkFactGroup;
-    _gpsRtkFactGroup = nullptr;
-}
-
-void GPSManager::setToolbox(QGCToolbox *toolbox)
-{
-    QGCTool::setToolbox(toolbox);
-
-    _gpsRtkFactGroup = new GPSRTKFactGroup(this);
-
-    connect(this, &GPSManager::onConnect,          this, &GPSManager::_onGPSConnect);
-    connect(this, &GPSManager::onDisconnect,       this, &GPSManager::_onGPSDisconnect);
-    connect(this, &GPSManager::surveyInStatus,     this, &GPSManager::_gpsSurveyInStatus);
-    connect(this, &GPSManager::satelliteUpdate,    this, &GPSManager::_gpsNumSatellites);
-}
-
-void GPSManager::_onGPSConnect()
-{
-    _gpsRtkFactGroup->connected()->setRawValue(true);
-}
-
-void GPSManager::_onGPSDisconnect()
-{
-    _gpsRtkFactGroup->connected()->setRawValue(false);
-}
-
-void GPSManager::_gpsSurveyInStatus(float duration, float accuracyMM,  double latitude, double longitude, float altitude, bool valid, bool active)
-{
-    _gpsRtkFactGroup->currentDuration()->setRawValue(duration);
-    _gpsRtkFactGroup->currentAccuracy()->setRawValue(static_cast<double>(accuracyMM) / 1000.0);
-    _gpsRtkFactGroup->currentLatitude()->setRawValue(latitude);
-    _gpsRtkFactGroup->currentLongitude()->setRawValue(longitude);
-    _gpsRtkFactGroup->currentAltitude()->setRawValue(altitude);
-    _gpsRtkFactGroup->valid()->setRawValue(valid);
-    _gpsRtkFactGroup->active()->setRawValue(active);
-}
-
-void GPSManager::_gpsNumSatellites(int numSatellites)
-{
-    _gpsRtkFactGroup->numSatellites()->setRawValue(numSatellites);
 }
 
 void GPSManager::connectGPS(const QString& device, const QString& gps_type)
@@ -133,13 +88,10 @@ void GPSManager::disconnectGPS(void)
     _rtcmMavlink = nullptr;
 }
 
-bool GPSManager::connected() const { return _gpsProvider && _gpsProvider->isRunning(); }
-
-FactGroup* GPSManager::gpsRtkFactGroup(void) { return _gpsRtkFactGroup; }
 
 void GPSManager::GPSPositionUpdate(GPSPositionMessage msg)
 {
-    qCDebug(RTKGPSLog) << QString("GPS: got position update: alt=%1, long=%2, lat=%3").arg(msg.position_data.altitude_msl_m).arg(msg.position_data.longitude_deg).arg(msg.position_data.latitude_deg);
+    qCDebug(RTKGPSLog) << QString("GPS: got position update: alt=%1, long=%2, lat=%3").arg(msg.position_data.alt).arg(msg.position_data.lon).arg(msg.position_data.lat);
 }
 void GPSManager::GPSSatelliteUpdate(GPSSatelliteMessage msg)
 {

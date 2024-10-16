@@ -1,23 +1,25 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
  *
  ****************************************************************************/
 
-#pragma once
+#ifndef PlanManager_H
+#define PlanManager_H
 
-#include <QtCore/QObject>
-#include <QtCore/QTimer>
-#include <QtCore/QLoggingCategory>
+#include <QObject>
+#include <QLoggingCategory>
+#include <QTimer>
 
 #include "MissionItem.h"
 #include "QGCMAVLink.h"
+#include "QGCLoggingCategory.h"
+#include "LinkInterface.h"
 
 class Vehicle;
-class MissionCommandTree;
 
 Q_DECLARE_LOGGING_CATEGORY(PlanManagerLog)
 
@@ -58,10 +60,10 @@ public:
     typedef enum {
         InternalError,
         AckTimeoutError,        ///< Timed out waiting for response from vehicle
-        ProtocolError,          ///< Incorrect protocol sequence from vehicle
+        ProtocolOrderError,     ///< Incorrect protocol sequence from vehicle
         RequestRangeError,      ///< Vehicle requested item out of range
         ItemMismatchError,      ///< Vehicle returned item with seq # different than requested
-        VehicleAckError,        ///< Vehicle returned error in ack
+        VehicleError,           ///< Vehicle returned error
         MissingRequestsError,   ///< Vehicle did not request all items during write sequence
         MaxRetryExceeded,       ///< Retry failed
         MissionTypeMismatch,    ///< MAV_MISSION_TYPE does not match _planType
@@ -80,7 +82,7 @@ signals:
     void error                      (int errorCode, const QString& errorMsg);
     void currentIndexChanged        (int currentIndex);
     void lastCurrentIndexChanged    (int lastCurrentIndex);
-    void progressPctChanged         (double progressPercentPct);
+    void progressPct                (double progressPercentPct);
     void removeAllComplete          (bool error);
     void sendComplete               (bool error);
     void resumeMissionReady         (void);
@@ -111,8 +113,8 @@ protected:
     bool _checkForExpectedAck(AckType_t receivedAck);
     void _readTransactionComplete(void);
     void _handleMissionCount(const mavlink_message_t& message);
-    void _handleMissionItem(const mavlink_message_t& message);
-    void _handleMissionRequest(const mavlink_message_t& message);
+    void _handleMissionItem(const mavlink_message_t& message, bool missionItemInt);
+    void _handleMissionRequest(const mavlink_message_t& message, bool missionItemInt);
     void _handleMissionAck(const mavlink_message_t& message);
     void _requestNextMissionItem(void);
     void _clearMissionItems(void);
@@ -132,11 +134,11 @@ protected:
     QString _planTypeString(void);
 
 protected:
-    Vehicle*            _vehicle =              nullptr;
-    MissionCommandTree* _missionCommandTree =   nullptr;
+    Vehicle*            _vehicle;
     MAV_MISSION_TYPE    _planType;
+    LinkInterface*      _dedicatedLink;
 
-    QTimer*             _ackTimeoutTimer =      nullptr;
+    QTimer*             _ackTimeoutTimer;
     AckType_t           _expectedAck;
     int                 _retryCount;
 
@@ -155,3 +157,5 @@ protected:
 private:
     void _setTransactionInProgress(TransactionType_t type);
 };
+
+#endif

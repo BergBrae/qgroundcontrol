@@ -14,13 +14,13 @@
  *   @author Gus Grubba <mavlink@grubba.com>
  */
 
-import QtQuick
+import QtQuick 2.4
 
-import QGroundControl.Palette
+import QGroundControl.Palette 1.0
 
 Rectangle {
-    QGCPalette { id: qgcPal; colorGroupEnabled: true }
+    QGCPalette { id: palette; colorGroupEnabled: true }
     id: root
-    color: qgcPal.window
+    color: palette.window
 
 }

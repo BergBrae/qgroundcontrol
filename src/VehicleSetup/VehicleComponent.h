@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -11,17 +11,16 @@
 /// @file
 ///     @author Don Gagne <don@thegagnes.com>
 
-#pragma once
+#ifndef VEHICLECOMPONENT_H
+#define VEHICLECOMPONENT_H
 
-#include <QtCore/QObject>
-#include <QtCore/QUrl>
-#include <QtCore/QVariant>
-#include <QtCore/QStringList>
+#include <QObject>
+#include <QQmlContext>
+#include <QQuickItem>
+
+#include "Vehicle.h"
 
 class AutoPilotPlugin;
-class Vehicle;
-class QQuickItem;
-class QQmlContext;
 
 /// A vehicle component is an object which abstracts the physical portion of a vehicle into a set of
 /// configurable values and user interface.
@@ -69,8 +68,8 @@ public:
     virtual void setupTriggerSignals(void);
 
 signals:
-    void setupCompleteChanged   (void);
-    void setupSourceChanged     (void);
+    void setupCompleteChanged(bool setupComplete);
+    void setupSourceChanged(void);
 
 protected slots:
     void _triggerUpdated(QVariant value);
@@ -79,3 +78,5 @@ protected:
     Vehicle*            _vehicle;
     AutoPilotPlugin*    _autopilot;
 };
+
+#endif

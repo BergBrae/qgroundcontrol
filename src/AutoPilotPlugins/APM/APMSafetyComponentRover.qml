@@ -8,14 +8,15 @@
  ****************************************************************************/
 
 
-import QtQuick
-import QtQuick.Controls
+import QtQuick              2.3
+import QtQuick.Controls     1.2
+import QtGraphicalEffects   1.0
 
-import QGroundControl.FactSystem
-import QGroundControl.FactControls
-import QGroundControl.Palette
-import QGroundControl.Controls
-import QGroundControl.ScreenTools
+import QGroundControl.FactSystem    1.0
+import QGroundControl.FactControls  1.0
+import QGroundControl.Palette       1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.ScreenTools   1.0
 
 SetupPage {
     id:             safetyPage
@@ -50,7 +51,7 @@ SetupPage {
                 QGCLabel {
                     id:         failsafeLabel
                     text:       qsTr("Failsafe Triggers")
-                    font.bold:   true
+                    font.family: ScreenTools.demiboldFontFamily
                 }
 
                 Rectangle {
@@ -130,7 +131,7 @@ SetupPage {
                         model:              [qsTr("Disabled"), qsTr("Hold"), qsTr("Hold and Disarm")]
                         currentIndex:       _failsafeCrashCheck.value
 
-                        onActivated: (index) => { _failsafeCrashCheck.value = index }
+                        onActivated: _failsafeCrashCheck.value = index
                     }
                  } // Rectangle - Failsafe Settings
             } // Column - Failsafe Settings
@@ -140,7 +141,7 @@ SetupPage {
 
                 QGCLabel {
                     text:           qsTr("Arming Checks")
-                    font.bold:      true
+                    font.family:    ScreenTools.demiboldFontFamily
                 }
 
                 Rectangle {

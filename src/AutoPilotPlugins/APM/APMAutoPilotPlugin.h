@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -8,9 +8,11 @@
  ****************************************************************************/
 
 
-#pragma once
+#ifndef APMAutoPilotPlugin_H
+#define APMAutoPilotPlugin_H
 
 #include "AutoPilotPlugin.h"
+#include "Vehicle.h"
 
 class APMAirframeComponent;
 class APMFlightModesComponent;
@@ -25,9 +27,7 @@ class APMLightsComponent;
 class APMSubFrameComponent;
 class ESP8266Component;
 class APMHeliComponent;
-class APMRemoteSupportComponent;
 class APMFollowComponent;
-class Vehicle;
 
 /// This is the APM specific implementation of the AutoPilot class.
 class APMAutoPilotPlugin : public AutoPilotPlugin
@@ -57,10 +57,12 @@ protected:
     APMTuningComponent*         _tuningComponent;
     ESP8266Component*           _esp8266Component;
     APMHeliComponent*           _heliComponent;
-    APMRemoteSupportComponent*  _apmRemoteSupportComponent;
-    APMFollowComponent *_followComponent = nullptr;
+#if 0
+    // Follow me not ready for Stable
+    APMFollowComponent*         _followComponent;
+#endif
 
-#if !defined(NO_SERIAL_LINK) && !defined(Q_OS_ANDROID)
+#if !defined(NO_SERIAL_LINK) && !defined(__android__)
 private slots:
     void _checkForBadCubeBlack(void);
 #endif
@@ -68,3 +70,5 @@ private slots:
 private:
     QVariantList                _components;
 };
+
+#endif

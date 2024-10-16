@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -11,34 +11,41 @@
 #include "QGCApplication.h"
 #include "VideoManager.h"
 
-#include <QtQml/QQmlEngine>
-#include <QtCore/QVariantList>
+#include <QQmlEngine>
+#include <QtQml>
+#include <QVariantList>
 
 #ifndef QGC_DISABLE_UVC
-#include <QtMultimedia/QMediaDevices>
-#include <QtMultimedia/QCameraDevice>
+#include <QCameraInfo>
 #endif
+
+const char* VideoSettings::videoSourceNoVideo   = "No Video Available";
+const char* VideoSettings::videoDisabled        = "Video Stream Disabled";
+const char* VideoSettings::videoSourceRTSP      = "RTSP Video Stream";
+const char* VideoSettings::videoSourceUDPH264   = "UDP h.264 Video Stream";
+const char* VideoSettings::videoSourceUDPH265   = "UDP h.265 Video Stream";
+const char* VideoSettings::videoSourceTCP       = "TCP-MPEG2 Video Stream";
+const char* VideoSettings::videoSourceMPEGTS    = "MPEG-TS (h.264) Video Stream";
 
 DECLARE_SETTINGGROUP(Video, "Video")
 {
     qmlRegisterUncreatableType<VideoSettings>("QGroundControl.SettingsManager", 1, 0, "VideoSettings", "Reference only");
 
     // Setup enum values for videoSource settings into meta data
-    QVariantList videoSourceList;
+    QStringList videoSourceList;
+#ifdef QGC_GST_STREAMING
     videoSourceList.append(videoSourceRTSP);
+#ifndef NO_UDP_VIDEO
     videoSourceList.append(videoSourceUDPH264);
     videoSourceList.append(videoSourceUDPH265);
+#endif
     videoSourceList.append(videoSourceTCP);
     videoSourceList.append(videoSourceMPEGTS);
-    videoSourceList.append(videoSource3DRSolo);
-    videoSourceList.append(videoSourceParrotDiscovery);
-    videoSourceList.append(videoSourceYuneecMantisG);
-    videoSourceList.append(videoSourceHerelinkAirUnit);
-    videoSourceList.append(videoSourceHerelinkHotspot);
+#endif
 #ifndef QGC_DISABLE_UVC
-    QList<QCameraDevice> videoInputs = QMediaDevices::videoInputs();
-    for (const auto& cameraDevice: videoInputs) {
-        videoSourceList.append(cameraDevice.description());
+    QList<QCameraInfo> cameras = QCameraInfo::availableCameras();
+    for (const QCameraInfo &cameraInfo: cameras) {
+        videoSourceList.append(cameraInfo.description());
     }
 #endif
     if (videoSourceList.count() == 0) {
@@ -47,37 +54,11 @@ DECLARE_SETTINGGROUP(Video, "Video")
     } else {
         videoSourceList.insert(0, videoDisabled);
     }
-
-    // make translated strings
-    QStringList videoSourceCookedList;
-    for (const QVariant& videoSource: videoSourceList) {
-        videoSourceCookedList.append( VideoSettings::tr(videoSource.toString().toStdString().c_str()) );
+    QVariantList videoSourceVarList;
+    for (const QString& videoSource: videoSourceList) {
+        videoSourceVarList.append(QVariant::fromValue(videoSource));
     }
-
-    _nameToMetaDataMap[videoSourceName]->setEnumInfo(videoSourceCookedList, videoSourceList);
-
-    const QVariantList removeForceVideoDecodeList{
-#if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
-        VideoDecoderOptions::ForceVideoDecoderDirectX3D,
-        VideoDecoderOptions::ForceVideoDecoderVideoToolbox,
-#elif defined(Q_OS_WIN)
-        VideoDecoderOptions::ForceVideoDecoderVAAPI,
-        VideoDecoderOptions::ForceVideoDecoderVideoToolbox,
-#elif defined(Q_OS_MAC)
-        VideoDecoderOptions::ForceVideoDecoderDirectX3D,
-        VideoDecoderOptions::ForceVideoDecoderVAAPI,
-#elif defined(Q_OS_ANDROID)
-        VideoDecoderOptions::ForceVideoDecoderDirectX3D,
-        VideoDecoderOptions::ForceVideoDecoderVideoToolbox,
-        VideoDecoderOptions::ForceVideoDecoderVAAPI,
-        VideoDecoderOptions::ForceVideoDecoderNVIDIA,
-#endif
-    };
-
-    for(const auto& value : removeForceVideoDecodeList) {
-        _nameToMetaDataMap[forceVideoDecoderName]->removeEnumInfo(value);
-    }
-
+    _nameToMetaDataMap[videoSourceName]->setEnumInfo(videoSourceList, videoSourceVarList);
     // Set default value for videoSource
     _setDefaults();
 }
@@ -108,7 +89,7 @@ DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, videoSource)
     if (!_videoSourceFact) {
         _videoSourceFact = _createSettingsFact(videoSourceName);
         //-- Check for sources no longer available
-        if(!_videoSourceFact->enumValues().contains(_videoSourceFact->rawValue().toString())) {
+        if(!_videoSourceFact->enumStrings().contains(_videoSourceFact->rawValue().toString())) {
             if (_noVideo) {
                 _videoSourceFact->setRawValue(videoSourceNoVideo);
             } else {
@@ -118,24 +99,6 @@ DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, videoSource)
         connect(_videoSourceFact, &Fact::valueChanged, this, &VideoSettings::_configChanged);
     }
     return _videoSourceFact;
-}
-
-DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, forceVideoDecoder)
-{
-    if (!_forceVideoDecoderFact) {
-        _forceVideoDecoderFact = _createSettingsFact(forceVideoDecoderName);
-
-        _forceVideoDecoderFact->setVisible(
-#ifdef QGC_GST_STREAMING
-            true
-#else
-            false
-#endif
-        );
-
-        connect(_forceVideoDecoderFact, &Fact::valueChanged, this, &VideoSettings::_configChanged);
-    }
-    return _forceVideoDecoderFact;
 }
 
 DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, udpPort)
@@ -167,6 +130,9 @@ DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, tcpUrl)
 
 bool VideoSettings::streamConfigured(void)
 {
+#if !defined(QGC_GST_STREAMING)
+    return false;
+#endif
     //-- First, check if it's autoconfigured
     if(qgcApp()->toolbox()->videoManager()->autoStreamConfigured()) {
         qCDebug(VideoManagerLog) << "Stream auto configured";
@@ -197,29 +163,10 @@ bool VideoSettings::streamConfigured(void)
         qCDebug(VideoManagerLog) << "Testing configuration for MPEG-TS Stream:" << udpPort()->rawValue().toInt();
         return udpPort()->rawValue().toInt() != 0;
     }
-    //-- If Herelink Air unit, good to go
-    if(vSource == videoSourceHerelinkAirUnit) {
-        qCDebug(VideoManagerLog) << "Stream configured for Herelink Air Unit";
-        return true;
-    }
-    //-- If Herelink Hotspot, good to go
-    if(vSource == videoSourceHerelinkHotspot) {
-        qCDebug(VideoManagerLog) << "Stream configured for Herelink Hotspot";
-        return true;
-    }
-#ifndef QGC_DISABLE_UVC
-    const QList<QCameraDevice> videoInputs = QMediaDevices::videoInputs();
-    for (const auto& cameraDevice: videoInputs) {
-        if(vSource == cameraDevice.description()) {
-            qCDebug(VideoManagerLog) << "Stream configured for UVC";
-            return true;
-        }
-    }
-#endif
     return false;
 }
 
 void VideoSettings::_configChanged(QVariant)
 {
-    emit streamConfiguredChanged(streamConfigured());
+    emit streamConfiguredChanged();
 }

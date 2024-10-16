@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -8,13 +8,18 @@
  ****************************************************************************/
 
 
-#pragma once
+#ifndef APMFlightModesComponentController_H
+#define APMFlightModesComponentController_H
 
-#include <QtCore/QStringList>
-#include <QtCore/QVariantList>
+#include <QObject>
+#include <QQuickItem>
+#include <QList>
+#include <QStringList>
 
+#include "UASInterface.h"
+#include "AutoPilotPlugin.h"
 #include "FactPanelController.h"
-#include "QGCMAVLink.h"
+#include "Vehicle.h"
 
 /// MVC Controller for FlightModesComponent.qml.
 class APMFlightModesComponentController : public FactPanelController
@@ -57,7 +62,7 @@ signals:
     void superSimpleModeEnabledChanged  (void);
 
 private slots:
-    void _rcChannelsChanged                     (int channelCount, int pwmValues[QGCMAVLink::maxRcChannels]);
+    void _rcChannelsChanged                     (int channelCount, int pwmValues[Vehicle::cMaxRcChannels]);
     void _updateSimpleParamsFromSimpleMode      (void);
     void _setupSimpleModeEnabled     (void);
 
@@ -76,12 +81,14 @@ private:
     QVariantList    _superSimpleModeEnabled;
 
     static const uint8_t    _allSimpleBits =    0x3F;
-    static const int        _cChannelOptions =  11;
+    static const int        _cChannelOptions =  10;
     static const int        _cSimpleModeBits =  8;
     static const int        _cFltModes =        6;
 
-    static constexpr const char*      _simpleParamName = "SIMPLE";
-    static constexpr const char*      _superSimpleParamName = "SUPER_SIMPLE";
+    static const char*      _simpleParamName;
+    static const char*      _superSimpleParamName;
 
     static bool _typeRegistered;
 };
+
+#endif

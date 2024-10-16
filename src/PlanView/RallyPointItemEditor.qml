@@ -1,12 +1,12 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+import QtQuick                      2.11
+import QtQuick.Controls             2.4
+import QtQuick.Layouts              1.11
 
-import QGroundControl.ScreenTools
-import QGroundControl.Vehicle
-import QGroundControl.Controls
-import QGroundControl.FactControls
-import QGroundControl.Palette
+import QGroundControl.ScreenTools   1.0
+import QGroundControl.Vehicle       1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.FactControls  1.0
+import QGroundControl.Palette       1.0
 
 Rectangle {
     id:     root

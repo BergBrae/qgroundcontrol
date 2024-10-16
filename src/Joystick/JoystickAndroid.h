@@ -1,19 +1,16 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
-#pragma once
+#ifndef JOYSTICKANDROID_H
+#define JOYSTICKANDROID_H
 
 #include "Joystick.h"
-#include <QtCore/private/qandroidextras_p.h>
+#include "Vehicle.h"
+#include "MultiVehicleManager.h"
 
-class MultiVehicleManager;
-class JoystickManager;
+#include <jni.h>
+#include <QtCore/private/qjni_p.h>
+#include <QtCore/private/qjnihelpers_p.h>
+#include <QtAndroidExtras/QtAndroidExtras>
+#include <QtAndroidExtras/QAndroidJniObject>
+
 
 class JoystickAndroid : public Joystick, public QtAndroidPrivate::GenericMotionEventListener, public QtAndroidPrivate::KeyEventListener
 {
@@ -31,7 +28,6 @@ public:
 private:
     bool handleKeyEvent(jobject event);
     bool handleGenericMotionEvent(jobject event);
-    int  _getAndroidHatAxis(int axisHatCode);
 
     virtual bool _open          ();
     virtual void _close         ();
@@ -49,8 +45,10 @@ private:
     static int * _androidBtnList; //list of all possible android buttons
     static int _androidBtnListCount;
 
-    static int ACTION_DOWN, ACTION_UP, AXIS_HAT_X, AXIS_HAT_Y;
+    static int ACTION_DOWN, ACTION_UP;
     static QMutex m_mutex;
 
     int deviceId;
 };
+
+#endif // JOYSTICKANDROID_H

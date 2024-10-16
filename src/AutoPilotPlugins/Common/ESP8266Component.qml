@@ -8,18 +8,18 @@
  ****************************************************************************/
 
 
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Dialogs
-import QtQuick.Layouts
+import QtQuick          2.3
+import QtQuick.Controls 1.2
+import QtQuick.Dialogs  1.2
+import QtQuick.Layouts  1.2
 
-import QGroundControl
-import QGroundControl.FactSystem
-import QGroundControl.FactControls
-import QGroundControl.Palette
-import QGroundControl.Controls
-import QGroundControl.ScreenTools
-import QGroundControl.Controllers
+import QGroundControl               1.0
+import QGroundControl.FactSystem    1.0
+import QGroundControl.FactControls  1.0
+import QGroundControl.Palette       1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.ScreenTools   1.0
+import QGroundControl.Controllers   1.0
 
 Item {
 
@@ -114,7 +114,7 @@ Item {
                 Item { width: 1; height: _margins * 0.5; }
                 QGCLabel {
                     text:                               qsTr("ESP WiFi Bridge Settings")
-                    font.bold:                          true
+                    font.family:                        ScreenTools.demiboldFontFamily
                 }
                 Rectangle {
                     color:                              qgcPal.windowShade
@@ -149,7 +149,7 @@ Item {
                                     width:                  _editFieldWidth
                                     model:                  ["Access Point Mode", "Station Mode"]
                                     currentIndex:           wifiMode ? wifiMode.value : 0
-                                    onActivated: (index) => {
+                                    onActivated: {
                                         wifiMode.value = index
                                     }
                                 }
@@ -166,7 +166,7 @@ Item {
                                     enabled:                wifiMode ? wifiMode.value === 0 : true
                                     model:                  controller.wifiChannels
                                     currentIndex:           wifiChannel ? wifiChannel.value - 1 : 0
-                                    onActivated: (index) => {
+                                    onActivated: {
                                         wifiChannel.value = index + 1
                                     }
                                 }
@@ -248,7 +248,7 @@ Item {
                                     width:                  _editFieldWidth
                                     model:                  controller.baudRates
                                     currentIndex:           controller.baudIndex
-                                    onActivated: (index) => {
+                                    onActivated: {
                                         controller.baudIndex = index
                                     }
                                 }
@@ -275,7 +275,7 @@ Item {
                 }
                 QGCLabel {
                     text:                               qsTr("ESP WiFi Bridge Status")
-                    font.bold:                          true
+                    font.family:                        ScreenTools.demiboldFontFamily
                 }
                 Rectangle {
                     color:                              qgcPal.windowShade
@@ -446,19 +446,16 @@ Item {
                         MessageDialog {
                             id:         rebootDialog
                             visible:    false
-                            buttons:    MessageDialog.Yes | MessageDialog.No
+                            icon:       StandardIcon.Warning
+                            standardButtons: StandardButton.Yes | StandardButton.No
                             title:      qsTr("Reboot WiFi Bridge")
                             text:       qsTr("This will restart the WiFi Bridge so the settings you've changed can take effect. Note that you may have to change your computer WiFi settings and QGroundControl link settings to match these changes. Are you sure you want to restart it?")
-                            onButtonClicked: function (button, role) {
-                                switch (button) {
-                                case MessageDialog.Yes:
-                                    controller.reboot()
-                                    rebootDialog.visible = false
-                                    break;
-                                case MessageDialog.No:
-                                    rebootDialog.visible = false
-                                    break;
-                                }
+                            onYes: {
+                                controller.reboot()
+                                rebootDialog.visible = false
+                            }
+                            onNo: {
+                                rebootDialog.visible = false
                             }
                         }
                     }

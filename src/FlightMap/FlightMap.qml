@@ -7,31 +7,37 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtQuick.Controls
-import QtLocation
-import QtPositioning
-import QtQuick.Dialogs
+import QtQuick          2.3
+import QtQuick.Controls 1.2
+import QtLocation       5.3
+import QtPositioning    5.3
+import QtQuick.Dialogs  1.2
 
-import QGroundControl
-import QGroundControl.FactSystem
-import QGroundControl.Controls
-import QGroundControl.FlightMap
-import QGroundControl.ScreenTools
-import QGroundControl.MultiVehicleManager
-import QGroundControl.Vehicle
-import QGroundControl.QGCPositionManager
+import QGroundControl                       1.0
+import QGroundControl.FactSystem            1.0
+import QGroundControl.Controls              1.0
+import QGroundControl.FlightMap             1.0
+import QGroundControl.ScreenTools           1.0
+import QGroundControl.MultiVehicleManager   1.0
+import QGroundControl.Vehicle               1.0
+import QGroundControl.QGCPositionManager    1.0
 
 Map {
     id: _map
 
-    plugin:     Plugin { name: "QGroundControl" }
-    opacity:    0.99 // https://bugreports.qt.io/browse/QTBUG-82185
+    //-- Qt 5.9 has rotation gesture enabled by default. Here we limit the possible gestures.
+    gesture.acceptedGestures:   MapGestureArea.PinchGesture | MapGestureArea.PanGesture | MapGestureArea.FlickGesture
+    gesture.flickDeceleration:  3000
+    plugin:                     Plugin { name: "QGroundControl" }
+
+    // https://bugreports.qt.io/browse/QTBUG-82185
+    opacity:                    0.99
 
     property string mapName:                        'defaultMap'
     property bool   isSatelliteMap:                 activeMapType.name.indexOf("Satellite") > -1 || activeMapType.name.indexOf("Hybrid") > -1
     property var    gcsPosition:                    QGroundControl.qgcPositionManger.gcsPosition
     property real   gcsHeading:                     QGroundControl.qgcPositionManger.gcsHeading
+    property bool   userPanned:                     false   ///< true: the user has manually panned the map
     property bool   allowGCSLocationCenter:         false   ///< true: map will center/zoom to gcs location one time
     property bool   allowVehicleLocationCenter:     false   ///< true: map will center/zoom to vehicle location one time
     property bool   firstGCSPositionReceived:       false   ///< true: first gcs position update was responded to
@@ -40,8 +46,7 @@ Map {
 
     readonly property real  maxZoomLevel: 20
 
-    property var    _activeVehicle:             QGroundControl.multiVehicleManager.activeVehicle
-    property var    _activeVehicleCoordinate:   _activeVehicle ? _activeVehicle.coordinate : QtPositioning.coordinate()
+    property var    activeVehicleCoordinate:        activeVehicle ? activeVehicle.coordinate : QtPositioning.coordinate()
 
     function setVisibleRegion(region) {
         // TODO: Is this still necessary with Qt 5.11?
@@ -53,21 +58,20 @@ Map {
     }
 
     function _possiblyCenterToVehiclePosition() {
-        if (!firstVehiclePositionReceived && allowVehicleLocationCenter && _activeVehicleCoordinate.isValid) {
+        if (!firstVehiclePositionReceived && allowVehicleLocationCenter && activeVehicleCoordinate.isValid) {
             firstVehiclePositionReceived = true
-            center = _activeVehicleCoordinate
+            center = activeVehicleCoordinate
             zoomLevel = QGroundControl.flightMapInitialZoom
         }
     }
 
     function centerToSpecifiedLocation() {
-        specifyMapPositionDialog.createObject(mainWindow).open()
+        mainWindow.showComponentDialog(specifyMapPositionDialog, qsTr("Specify Position"), mainWindow.showDialogDefaultWidth, StandardButton.Close)
     }
 
     Component {
         id: specifyMapPositionDialog
         EditPositionDialog {
-            title:                  qsTr("Specify Position")
             coordinate:             center
             onCoordinateChanged:    center = coordinate
         }
@@ -78,10 +82,18 @@ Map {
         if (gcsPosition.isValid && allowGCSLocationCenter && !firstGCSPositionReceived && !firstVehiclePositionReceived) {
             firstGCSPositionReceived = true
             //-- Only center on gsc if we have no vehicle (and we are supposed to do so)
-            var _activeVehicleCoordinate = _activeVehicle ? _activeVehicle.coordinate : QtPositioning.coordinate()
-            if(QGroundControl.settingsManager.flyViewSettings.keepMapCenteredOnVehicle.rawValue || !_activeVehicleCoordinate.isValid)
+            var activeVehicleCoordinate = activeVehicle ? activeVehicle.coordinate : QtPositioning.coordinate()
+            if(QGroundControl.settingsManager.flyViewSettings.keepMapCenteredOnVehicle.rawValue || !activeVehicleCoordinate.isValid)
                 center = gcsPosition
         }
+    }
+
+    // We track whether the user has panned or not to correctly handle automatic map positioning
+    Connections {
+        target: gesture
+
+        onPanFinished:      userPanned = true
+        onFlickFinished:    userPanned = true
     }
 
     function updateActiveMapType() {
@@ -96,76 +108,23 @@ Map {
         }
     }
 
-    on_ActiveVehicleCoordinateChanged: _possiblyCenterToVehiclePosition()
+    onActiveVehicleCoordinateChanged: _possiblyCenterToVehiclePosition()
 
-    onMapReadyChanged: {
-        if (_map.mapReady) {
-            updateActiveMapType()
-            _possiblyCenterToVehiclePosition()
-        }
+    Component.onCompleted: {
+        updateActiveMapType()
+        _possiblyCenterToVehiclePosition()
     }
 
     Connections {
-        target: QGroundControl.settingsManager.flightMapSettings.mapType
-        function onRawValueChanged() { updateActiveMapType() }
+        target:             QGroundControl.settingsManager.flightMapSettings.mapType
+        onRawValueChanged:  updateActiveMapType()
     }
 
     Connections {
-        target: QGroundControl.settingsManager.flightMapSettings.mapProvider
-        function onRawValueChanged() { updateActiveMapType() }
+        target:             QGroundControl.settingsManager.flightMapSettings.mapProvider
+        onRawValueChanged:  updateActiveMapType()
     }
 
-    signal mapPanStart
-    signal mapPanStop
-    signal mapClicked(var position)
-    
-    PinchHandler {
-        id:                 pinch
-        target:             null
-        grabPermissions:    PointerHandler.TakeOverForbidden
-
-        property var pinchStartCentroid
-
-        onActiveChanged: {
-            if (active) {
-                pinchStartCentroid = _map.toCoordinate(pinch.centroid.position, false)
-            }
-        }
-        onScaleChanged: (delta) => {
-            _map.zoomLevel += Math.log2(delta)
-            _map.alignCoordinateToPoint(pinchStartCentroid, pinch.centroid.position)
-        }
-    }
-
-    WheelHandler {
-        // workaround for QTBUG-87646 / QTBUG-112394 / QTBUG-112432:
-        // Magic Mouse pretends to be a trackpad but doesn't work with PinchHandler
-        // and we don't yet distinguish mice and trackpads on Wayland either
-        acceptedDevices:    Qt.platform.pluginName === "cocoa" || Qt.platform.pluginName === "wayland" ?
-                                PointerDevice.Mouse | PointerDevice.TouchPad : PointerDevice.Mouse
-        rotationScale:      1 / 120
-        property:           "zoomLevel"
-    }
-
-    DragHandler {
-        target: null
-        grabPermissions: PointerHandler.TakeOverForbidden
-
-        onActiveChanged: {
-            if (active) {
-                mapPanStart()
-            } else {
-                mapPanStop()
-            }
-        }
-
-        onActiveTranslationChanged: (delta) => _map.pan(-delta.x, -delta.y)
-    }
-
-    TapHandler {
-        onTapped: (eventPoint) => mapClicked(eventPoint.position)
-    }
-    
     /// Ground Station location
     MapQuickItem {
         anchorPoint.x:  sourceItem.width / 2

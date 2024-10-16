@@ -7,15 +7,15 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+import QtQuick          2.3
+import QtQuick.Controls 1.2
+import QtQuick.Layouts  1.2
 
-import QGroundControl
-import QGroundControl.Controls
-import QGroundControl.MultiVehicleManager
-import QGroundControl.ScreenTools
-import QGroundControl.Palette
+import QGroundControl                       1.0
+import QGroundControl.Controls              1.0
+import QGroundControl.MultiVehicleManager   1.0
+import QGroundControl.ScreenTools           1.0
+import QGroundControl.Palette               1.0
 
 //-------------------------------------------------------------------------
 //-- Armed Indicator
@@ -32,11 +32,11 @@ QGCComboBox {
     property var    _activeVehicle: QGroundControl.multiVehicleManager.activeVehicle
     property bool   _armed:         _activeVehicle ? _activeVehicle.armed : false
 
-    onActivated: (index) => {
+    onActivated: {
         if (index == 0) {
-            mainWindow.armVehicleRequest()
+            mainWindow.armVehicle()
         } else {
-            mainWindow.disarmVehicleRequest()
+            mainWindow.disarmVehicle()
         }
         currentIndex = -1
     }

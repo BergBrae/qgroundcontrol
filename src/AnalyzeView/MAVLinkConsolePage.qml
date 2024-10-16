@@ -7,32 +7,28 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Dialogs
-import QtQuick.Layouts
+import QtQuick          2.3
+import QtQuick.Controls 1.2
+import QtQuick.Dialogs  1.2
+import QtQuick.Layouts      1.2
 
-import QGroundControl
-import QGroundControl.Palette
-import QGroundControl.FactSystem
-import QGroundControl.FactControls
-import QGroundControl.Controls
-import QGroundControl.ScreenTools
-import QGroundControl.Controllers
+import QGroundControl               1.0
+import QGroundControl.Palette       1.0
+import QGroundControl.FactSystem    1.0
+import QGroundControl.FactControls  1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.ScreenTools   1.0
+import QGroundControl.Controllers   1.0
 
 AnalyzePage {
-    id:                 mavlinkConsolePage
-    pageComponent:      pageComponent
-    pageDescription:    qsTr("Provides a connection to the vehicle's system shell.")
-    allowPopout:        true
+    id:              mavlinkConsolePage
+    pageComponent:   pageComponent
+    pageName:        qsTr("Mavlink Console")
+    pageDescription: qsTr("Mavlink Console provides a connection to the vehicle's system shell.")
 
     property bool isLoaded: false
 
-    // Key input on mobile is handled differently, so use a separate command input text field.
-    // E.g. for android see https://bugreports.qt.io/browse/QTBUG-40803
-    readonly property bool _separateCommandInput: ScreenTools.isMobile
-
-    MAVLinkConsoleController {
+    MavlinkConsoleController {
         id: conController
     }
 
@@ -48,215 +44,94 @@ AnalyzePage {
                 target: conController
 
                 onDataChanged: {
+                    // Keep the view in sync if the button is checked
                     if (isLoaded) {
-                        // rate-limit updates to reduce CPU load
-                        updateTimer.start();
+                        if (followTail.checked) {
+                            listview.positionViewAtEnd();
+                        }
                     }
                 }
             }
 
-            property int _consoleOutputLen: 0
+            Component {
+                id: delegateItem
+                Rectangle {
+                    color:  qgcPal.windowShade
+                    height: Math.round(ScreenTools.defaultFontPixelHeight * 0.1 + field.height)
+                    width:  listview.width
 
-            function scrollToBottom() {
-                if (flickable.contentHeight > flickable.height)
-                    flickable.contentY = flickable.contentHeight-flickable.height
-            }
-            function getCommand() {
-                return textConsole.getText(_consoleOutputLen, textConsole.length)
-            }
-            function getCommandAndClear() {
-                var command = getCommand()
-                textConsole.remove(_consoleOutputLen, textConsole.length)
-                return command
-            }
-
-            function pasteFromClipboard() {
-                // we need to handle a few cases here:
-                // in the general form we have: <command_pre><cursor><command_post>
-                // and the clipboard may contain newlines
-                var cursor = textConsole.cursorPosition - _consoleOutputLen
-                var command = getCommandAndClear()
-                var command_pre = ""
-                var command_post = command
-                if (cursor > 0) {
-                    command_pre = command.substr(0, cursor)
-                    command_post = command.substr(cursor)
-                }
-                var command_leftover = conController.handleClipboard(command_pre) + command_post
-                textConsole.insert(textConsole.length, command_leftover)
-                textConsole.cursorPosition = textConsole.length - command_post.length
-            }
-
-            Timer {
-                id: updateTimer
-                interval: 30
-                running: false
-                repeat: false
-                onTriggered: {
-                    // only update if scroll bar is at the bottom
-                    if (flickable.atYEnd) {
-                        // backup & restore cursor & command
-                        var command = getCommand()
-                        var cursor = textConsole.cursorPosition - _consoleOutputLen
-                        textConsole.text = conController.text
-                        _consoleOutputLen = textConsole.length
-                        textConsole.insert(textConsole.length, command)
-                        textConsole.cursorPosition = textConsole.length
-                        scrollToBottom()
-                        if (cursor >= 0) {
-                            // We could restore the selection here too...
-                            textConsole.cursorPosition = _consoleOutputLen + cursor
-                        }
-                    } else {
-                        updateTimer.start();
+                    QGCLabel {
+                        id:          field
+                        text:        display
+                        width:       parent.width
+                        wrapMode:    Text.NoWrap
+                        font.family: ScreenTools.fixedFontFamily
+                        anchors.verticalCenter: parent.verticalCenter
                     }
                 }
             }
 
-            QGCFlickable {
-                id:                 flickable
-                Layout.fillWidth:   true
-                Layout.fillHeight:  true
-                contentWidth:       textConsole.width
-                contentHeight:      textConsole.height
+            QGCListView {
+                Component.onCompleted: {
+                    isLoaded = true
+                }
+                Layout.fillHeight: true
+                Layout.fillWidth:  true
+                clip:              true
+                id:                listview
+                model:             conController
+                delegate:          delegateItem
 
-                TextArea.flickable: TextArea {
-                    id:                      textConsole
-                    width:                   availableWidth
-                    wrapMode:                Text.WordWrap
-                    readOnly:                _separateCommandInput
-                    textFormat:              TextEdit.RichText
-                    inputMethodHints:        Qt.ImhNoAutoUppercase | Qt.ImhMultiLine
-                    text:                    "> "
-                    focus:                   true
-                    color:                  qgcPal.text
-                    selectedTextColor:      qgcPal.windowShade
-                    selectionColor:         qgcPal.text
-                    font.pointSize:         ScreenTools.defaultFontPointSize
-                    font.family:            ScreenTools.fixedFontFamily
-
-                    Component.onCompleted: {
-                        isLoaded = true
-                        _consoleOutputLen = textConsole.length
-                        textConsole.cursorPosition = _consoleOutputLen
-                        if (!_separateCommandInput) {
-                            textConsole.forceActiveFocus()
-                        }
-                    }
-
-                    background: Rectangle { color: qgcPal.windowShade }
-
-                    Keys.onPressed: (event) => {
-                        if (event.key == Qt.Key_Tab) { // ignore tabs
-                            event.accepted = true
-                        }
-                        if (event.matches(StandardKey.Cut)) {
-                            // ignore for now
-                            event.accepted = true
-                        }
-
-                        if (!event.matches(StandardKey.Copy) &&
-                            event.key != Qt.Key_Escape &&
-                            event.key != Qt.Key_Insert &&
-                            event.key != Qt.Key_Pause &&
-                            event.key != Qt.Key_Print &&
-                            event.key != Qt.Key_SysReq &&
-                            event.key != Qt.Key_Clear &&
-                            event.key != Qt.Key_Home &&
-                            event.key != Qt.Key_End &&
-                            event.key != Qt.Key_Left &&
-                            event.key != Qt.Key_Up &&
-                            event.key != Qt.Key_Right &&
-                            event.key != Qt.Key_Down &&
-                            event.key != Qt.Key_PageUp &&
-                            event.key != Qt.Key_PageDown &&
-                            event.key != Qt.Key_Shift &&
-                            event.key != Qt.Key_Control &&
-                            event.key != Qt.Key_Meta &&
-                            event.key != Qt.Key_Alt &&
-                            event.key != Qt.Key_AltGr &&
-                            event.key != Qt.Key_CapsLock &&
-                            event.key != Qt.Key_NumLock &&
-                            event.key != Qt.Key_ScrollLock &&
-                            event.key != Qt.Key_Super_L &&
-                            event.key != Qt.Key_Super_R &&
-                            event.key != Qt.Key_Menu &&
-                            event.key != Qt.Key_Hyper_L &&
-                            event.key != Qt.Key_Hyper_R &&
-                            event.key != Qt.Key_Direction_L &&
-                            event.key != Qt.Key_Direction_R) {
-                            // Note: dead keys do not generate keyPressed event on linux, see
-                            // https://bugreports.qt.io/browse/QTBUG-79216
-
-                            scrollToBottom()
-
-                            // ensure cursor position is at an editable region
-                            if (textConsole.selectionStart < _consoleOutputLen) {
-                                textConsole.select(_consoleOutputLen, textConsole.selectionEnd)
-                            }
-                            if (textConsole.cursorPosition < _consoleOutputLen) {
-                                textConsole.cursorPosition = textConsole.length
-                            }
-                        }
-
-                        if (event.key == Qt.Key_Left) {
-                            // don't move beyond current command
-                            if (textConsole.cursorPosition == _consoleOutputLen) {
-                                event.accepted = true
-                            }
-                        }
-                        if (event.key == Qt.Key_Backspace) {
-                            if (textConsole.cursorPosition <= _consoleOutputLen) {
-                                event.accepted = true
-                            }
-                        }
-                        if (event.key == Qt.Key_Enter || event.key == Qt.Key_Return) {
-                            conController.sendCommand(getCommandAndClear())
-                            event.accepted = true
-                        }
-
-                        if (event.matches(StandardKey.Paste)) {
-                            pasteFromClipboard()
-                            event.accepted = true
-                        }
-
-                        // command history
-                        if (event.key == Qt.Key_Up) {
-                            var command = conController.historyUp(getCommandAndClear())
-                            textConsole.insert(textConsole.length, command)
-                            textConsole.cursorPosition = textConsole.length
-                            event.accepted = true
-                        } else if (event.key == Qt.Key_Down) {
-                            var command = conController.historyDown(getCommandAndClear())
-                            textConsole.insert(textConsole.length, command)
-                            textConsole.cursorPosition = textConsole.length
-                            event.accepted = true
-                        }
-                    }
+                // Unsync the view if the user interacts
+                onMovementStarted: {
+                    followTail.checked = false
                 }
             }
 
             RowLayout {
                 Layout.fillWidth:   true
-                visible:            _separateCommandInput
                 QGCTextField {
-                    id:               commandInput
+                    id:               command
                     Layout.fillWidth: true
-                    placeholderText:  qsTr("Enter Commands here...")
+                    placeholderText:  "Enter Commands here..."
                     inputMethodHints: Qt.ImhNoAutoUppercase
 
                     function sendCommand() {
                         conController.sendCommand(text)
                         text = ""
-                        scrollToBottom()
                     }
                     onAccepted: sendCommand()
+
+                    Keys.onPressed: {
+                        if (event.key === Qt.Key_Up) {
+                            text = conController.historyUp(text);
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Down) {
+                            text = conController.historyDown(text);
+                            event.accepted = true;
+                        }
+                    }
                 }
 
                 QGCButton {
                     id:        sendButton
                     text:      qsTr("Send")
-                    onClicked: commandInput.sendCommand()
+                    visible:   ScreenTools.isMobile
+
+                    onClicked: command.sendCommand()
+                }
+
+                QGCButton {
+                    id:        followTail
+                    text:      qsTr("Show Latest")
+                    checkable: true
+                    checked:   true
+
+                    onCheckedChanged: {
+                        if (checked && isLoaded) {
+                            listview.positionViewAtEnd();
+                        }
+                    }
                 }
             }
         }

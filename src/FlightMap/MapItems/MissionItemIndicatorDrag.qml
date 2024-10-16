@@ -7,12 +7,12 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtLocation
+import QtQuick      2.3
+import QtLocation   5.3
 
-import QGroundControl
-import QGroundControl.ScreenTools
-import QGroundControl.Controls
+import QGroundControl               1.0
+import QGroundControl.ScreenTools   1.0
+import QGroundControl.Controls      1.0
 
 /// Use to drag a MissionItemIndicator
 Rectangle {
@@ -71,7 +71,6 @@ Rectangle {
         drag.maximumX:      itemDragger.parent.width - parent.width
         drag.maximumY:      itemDragger.parent.height - parent.height
         preventStealing:    true
-        enabled:            itemDragger.visible
 
         onClicked: {
             focus = true

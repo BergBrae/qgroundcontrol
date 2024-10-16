@@ -1,14 +1,5 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
-
-/****************************************************************************
- *
  *   Copyright (c) 2016 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,7 +39,7 @@
 
 #pragma once
 
-#include <QtCore/QtGlobal>
+#include <QtGlobal>
 
 #define GPS_READ_BUFFER_SIZE 1024
 
@@ -56,8 +47,7 @@
 #define GPS_WARN(...) qWarning(__VA_ARGS__)
 #define GPS_ERR(...) qCritical(__VA_ARGS__)
 
-#include "sensor_gps.h"
-#include "sensor_gnss_relative.h"
+#include "vehicle_gps_position.h"
 #include "satellite_info.h"
 
 #define M_DEG_TO_RAD 		(M_PI / 180.0)
@@ -65,9 +55,7 @@
 #define M_DEG_TO_RAD_F 		0.01745329251994f
 #define M_RAD_TO_DEG_F 		57.2957795130823f
 
-#define M_PI_2_F M_PI
-
-#include <QtCore/QThread>
+#include <QThread>
 
 class Sleeper : public QThread
 {
@@ -81,7 +69,7 @@ static inline void gps_usleep(unsigned long usecs) {
 
 typedef uint64_t gps_abstime;
 
-#include <QtCore/QDateTime>
+#include <QDateTime>
 /**
  * Get the current time in us. Function signature:
  * uint64_t hrt_absolute_time()

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -8,9 +8,10 @@
  ****************************************************************************/
 
 
-#pragma once
+#ifndef QmlObjectListModel_H
+#define QmlObjectListModel_H
 
-#include <QtCore/QAbstractListModel>
+#include <QAbstractListModel>
 
 class QmlObjectListModel : public QAbstractListModel
 {
@@ -27,7 +28,6 @@ public:
     Q_PROPERTY(bool dirty READ dirty WRITE setDirty NOTIFY dirtyChanged)
 
     Q_INVOKABLE QObject* get(int index);
-    const QObject *get(int index) const;
 
     // Property accessors
     
@@ -40,14 +40,11 @@ public:
     QObjectList swapObjectList      (const QObjectList& newlist);
     void        clear               ();
     QObject*    removeAt            (int i);
-    QObject*    removeOne           (const QObject* object) { return removeAt(indexOf(object)); }
+    QObject*    removeOne           (QObject* object) { return removeAt(indexOf(object)); }
     void        insert              (int i, QObject* object);
     void        insert              (int i, QList<QObject*> objects);
-    bool        contains            (const QObject* object) { return _objectList.indexOf(object) != -1; }
-    int         indexOf             (const QObject* object) { return _objectList.indexOf(object); }
-
-    /// Moves an item to a new position
-    void move(int from, int to);
+    bool        contains            (QObject* object) { return _objectList.indexOf(object) != -1; }
+    int         indexOf             (QObject* object) { return _objectList.indexOf(object); }
 
     QObject*    operator[]          (int i);
     const QObject* operator[]       (int i) const;
@@ -86,6 +83,8 @@ private:
     bool _skipDirtyFirstItem;
     bool _externalBeginResetModel;
         
-    static constexpr int ObjectRole = Qt::UserRole;
-    static constexpr int TextRole = Qt::UserRole + 1;
+    static const int ObjectRole;
+    static const int TextRole;
 };
+
+#endif

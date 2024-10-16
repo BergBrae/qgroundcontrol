@@ -7,11 +7,11 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtQuick.Controls
+import QtQuick          2.3
+import QtQuick.Controls 2.0
 
-import QGroundControl.Palette
-import QGroundControl.ScreenTools
+import QGroundControl.Palette       1.0
+import QGroundControl.ScreenTools   1.0
 
 GroupBox {
     id: control

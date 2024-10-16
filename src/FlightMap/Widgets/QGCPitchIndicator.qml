@@ -14,9 +14,9 @@
  *   @author Gus Grubba <gus@auterion.com>
  */
 
-import QtQuick
-import QGroundControl.ScreenTools
-import QGroundControl.Controls
+import QtQuick 2.3
+import QGroundControl.ScreenTools 1.0
+import QGroundControl.Controls 1.0
 
 Rectangle {
     property real pitchAngle:       0
@@ -56,7 +56,7 @@ Rectangle {
                         anchors.horizontalCenterOffset: -(_longDash)
                         anchors.verticalCenter: parent.verticalCenter
                         smooth: true
-                        font.bold:   true
+                        font.family: ScreenTools.demiboldFontFamily
                         font.pointSize: _fontSize
                         text: _pitch
                         color: "white"
@@ -67,7 +67,7 @@ Rectangle {
                         anchors.horizontalCenterOffset: (_longDash)
                         anchors.verticalCenter: parent.verticalCenter
                         smooth: true
-                        font.bold:   true
+                        font.family: ScreenTools.demiboldFontFamily
                         font.pointSize: _fontSize
                         text: _pitch
                         color: "white"

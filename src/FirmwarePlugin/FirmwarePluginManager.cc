@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -13,7 +13,6 @@
 
 #include "FirmwarePluginManager.h"
 #include "FirmwarePlugin.h"
-#include "FirmwarePluginFactory.h"
 
 FirmwarePluginManager::FirmwarePluginManager(QGCApplication* app, QGCToolbox* toolbox)
     : QGCTool(app, toolbox)
@@ -27,35 +26,33 @@ FirmwarePluginManager::~FirmwarePluginManager()
     delete _genericFirmwarePlugin;
 }
 
-QList<QGCMAVLink::FirmwareClass_t> FirmwarePluginManager::supportedFirmwareClasses(void)
+QList<MAV_AUTOPILOT> FirmwarePluginManager::supportedFirmwareTypes(void)
 {
-    if (_supportedFirmwareClasses.isEmpty()) {
+    if (_supportedFirmwareTypes.isEmpty()) {
         QList<FirmwarePluginFactory*> factoryList = FirmwarePluginFactoryRegister::instance()->pluginFactories();
         for (int i = 0; i < factoryList.count(); i++) {
-            _supportedFirmwareClasses.append(factoryList[i]->supportedFirmwareClasses());
+            _supportedFirmwareTypes.append(factoryList[i]->supportedFirmwareTypes());
         }
-        _supportedFirmwareClasses.append(QGCMAVLink::FirmwareClassGeneric);
+        _supportedFirmwareTypes.append(MAV_AUTOPILOT_GENERIC);
     }
-    return _supportedFirmwareClasses;
+    return _supportedFirmwareTypes;
 }
 
-QList<QGCMAVLink::VehicleClass_t> FirmwarePluginManager::supportedVehicleClasses(QGCMAVLink::FirmwareClass_t firmwareClass)
+QList<MAV_TYPE> FirmwarePluginManager::supportedVehicleTypes(MAV_AUTOPILOT firmwareType)
 {
-    QList<QGCMAVLink::VehicleClass_t> vehicleClasses;
+    QList<MAV_TYPE> vehicleTypes;
 
-    FirmwarePluginFactory* factory = _findPluginFactory(firmwareClass);
+    FirmwarePluginFactory* factory = _findPluginFactory(firmwareType);
 
     if (factory) {
-        vehicleClasses = factory->supportedVehicleClasses();
-    } else if (firmwareClass == QGCMAVLink::FirmwareClassGeneric) {
-        // Generic supports all specific vehicle class
-        vehicleClasses = QGCMAVLink::allVehicleClasses();
-        vehicleClasses.removeOne(QGCMAVLink::VehicleClassGeneric);
+        vehicleTypes = factory->supportedVehicleTypes();
+    } else if (firmwareType == MAV_AUTOPILOT_GENERIC) {
+        vehicleTypes << MAV_TYPE_FIXED_WING << MAV_TYPE_QUADROTOR << MAV_TYPE_VTOL_QUADROTOR << MAV_TYPE_GROUND_ROVER << MAV_TYPE_SUBMARINE;
     } else {
-        qWarning() << "Request for unknown firmware plugin factory" << firmwareClass;
+        qWarning() << "Request for unknown firmware plugin factory" << firmwareType;
     }
 
-    return vehicleClasses;
+    return vehicleTypes;
 }
 
 FirmwarePlugin* FirmwarePluginManager::firmwarePluginForAutopilot(MAV_AUTOPILOT firmwareType, MAV_TYPE vehicleType)
@@ -65,6 +62,8 @@ FirmwarePlugin* FirmwarePluginManager::firmwarePluginForAutopilot(MAV_AUTOPILOT 
 
     if (factory) {
         plugin = factory->firmwarePluginForAutopilot(firmwareType, vehicleType);
+    } else if (firmwareType != MAV_AUTOPILOT_GENERIC) {
+        qWarning() << "Request for unknown firmware plugin factory" << firmwareType;
     }
 
     if (!plugin) {
@@ -78,14 +77,14 @@ FirmwarePlugin* FirmwarePluginManager::firmwarePluginForAutopilot(MAV_AUTOPILOT 
     return plugin;
 }
 
-FirmwarePluginFactory* FirmwarePluginManager::_findPluginFactory(QGCMAVLink::FirmwareClass_t firmwareClass)
+FirmwarePluginFactory* FirmwarePluginManager::_findPluginFactory(MAV_AUTOPILOT firmwareType)
 {
     QList<FirmwarePluginFactory*> factoryList = FirmwarePluginFactoryRegister::instance()->pluginFactories();
 
     // Find the plugin which supports this vehicle
     for (int i=0; i<factoryList.count(); i++) {
         FirmwarePluginFactory* factory = factoryList[i];
-        if (factory->supportedFirmwareClasses().contains(firmwareClass)) {
+        if (factory->supportedFirmwareTypes().contains(firmwareType)) {
             return factory;
         }
     }

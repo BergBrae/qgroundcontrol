@@ -1,11 +1,11 @@
-import QtQuick
-import QtQuick.Controls
+import QtQuick 2.3
+import QtQuick.Controls 1.2
 
-import QGroundControl.FactSystem
-import QGroundControl.FactControls
-import QGroundControl.Controls
-import QGroundControl.Controllers
-import QGroundControl.Palette
+import QGroundControl.FactSystem 1.0
+import QGroundControl.FactControls 1.0
+import QGroundControl.Controls 1.0
+import QGroundControl.Controllers 1.0
+import QGroundControl.Palette 1.0
 
 Item {
     anchors.fill:       parent
@@ -34,12 +34,12 @@ Item {
 
         VehicleSummaryRow {
             labelText: qsTr("Firmware Version")
-            valueText: globals.activeVehicle.firmwareMajorVersion === -1 ? qsTr("Unknown") : globals.activeVehicle.firmwareMajorVersion + "." + globals.activeVehicle.firmwareMinorVersion + "." + globals.activeVehicle.firmwarePatchVersion + globals.activeVehicle.firmwareVersionTypeString
+            valueText: activeVehicle.firmwareMajorVersion === -1 ? qsTr("Unknown") : activeVehicle.firmwareMajorVersion + "." + activeVehicle.firmwareMinorVersion + "." + activeVehicle.firmwarePatchVersion + activeVehicle.firmwareVersionTypeString
         }
         VehicleSummaryRow {
-            visible: globals.activeVehicle.firmwareCustomMajorVersion !== -1
+            visible: activeVehicle.firmwareCustomMajorVersion !== -1
             labelText: qsTr("Custom Fw. Ver.")
-            valueText: globals.activeVehicle.firmwareCustomMajorVersion + "." + globals.activeVehicle.firmwareCustomMinorVersion + "." + globals.activeVehicle.firmwareCustomPatchVersion
+            valueText: activeVehicle.firmwareCustomMajorVersion + "." + activeVehicle.firmwareCustomMinorVersion + "." + activeVehicle.firmwareCustomPatchVersion
         }
     }
 }

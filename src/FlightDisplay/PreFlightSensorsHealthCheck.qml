@@ -7,17 +7,17 @@
  *
  ****************************************************************************/
 
-import QtQuick
+import QtQuick 2.3
 
-import QGroundControl
-import QGroundControl.Controls
-import QGroundControl.Vehicle
+import QGroundControl           1.0
+import QGroundControl.Controls  1.0
+import QGroundControl.Vehicle   1.0
 
 PreFlightCheckButton {
     name:               qsTr("Sensors")
     telemetryFailure:   _unhealthySensors & _allCheckedSensors
 
-    property int    _unhealthySensors:  globals.activeVehicle ? globals.activeVehicle.sensorsUnhealthyBits : 1
+    property int    _unhealthySensors:  activeVehicle ? activeVehicle.sensorsUnhealthyBits : 1
     property int    _allCheckedSensors: Vehicle.SysStatusSensor3dMag |
                                         Vehicle.SysStatusSensor3dAccel |
                                         Vehicle.SysStatusSensor3dGyro |

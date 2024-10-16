@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -11,10 +11,12 @@
 /// @file
 ///     @author Gus Grubba <gus@auterion.com>
 
-#pragma once
+#ifndef ScreenToolsController_H
+#define ScreenToolsController_H
 
-#include <QtQuick/QQuickItem>
-#include <QtGui/QCursor>
+#include "QGCApplication.h"
+#include <QQuickItem>
+#include <QCursor>
 
 /*!
     @brief Screen helper tools for QML widgets
@@ -30,7 +32,6 @@ public:
     Q_PROPERTY(bool     isAndroid           READ isAndroid          CONSTANT)
     Q_PROPERTY(bool     isiOS               READ isiOS              CONSTANT)
     Q_PROPERTY(bool     isMobile            READ isMobile           CONSTANT)
-    Q_PROPERTY(bool     fakeMobile          READ fakeMobile         CONSTANT)
     Q_PROPERTY(bool     isDebug             READ isDebug            CONSTANT)
     Q_PROPERTY(bool     isMacOS             READ isMacOS            CONSTANT)
     Q_PROPERTY(bool     isLinux             READ isLinux            CONSTANT)
@@ -40,20 +41,16 @@ public:
     Q_PROPERTY(QString  iOSDevice           READ iOSDevice          CONSTANT)
     Q_PROPERTY(QString  fixedFontFamily     READ fixedFontFamily    CONSTANT)
     Q_PROPERTY(QString  normalFontFamily    READ normalFontFamily   CONSTANT)
+    Q_PROPERTY(QString  boldFontFamily      READ boldFontFamily     CONSTANT)
 
     // Returns current mouse position
     Q_INVOKABLE int mouseX(void) { return QCursor::pos().x(); }
     Q_INVOKABLE int mouseY(void) { return QCursor::pos().y(); }
 
-    // QFontMetrics::descent for default font
-    Q_INVOKABLE double defaultFontDescent(int pointSize) const;
-
 #if defined(__mobile__)
     bool    isMobile            () const { return true;  }
-    bool    fakeMobile          () const { return false; }
 #else
-    bool    isMobile            () const { return fakeMobile(); }
-    bool    fakeMobile          () const;
+    bool    isMobile            () const { return qgcApp()->fakeMobile(); }
 #endif
 
 #if defined (Q_OS_ANDROID)
@@ -106,8 +103,12 @@ public:
     bool isDebug                () { return false; }
 #endif
 
-    bool        hasTouch            () const;
-    QString     iOSDevice           () const;
-    QString     fixedFontFamily     () const;
-    QString     normalFontFamily    () const;
+    bool    hasTouch() const;
+
+    QString  iOSDevice          () const;
+    QString  fixedFontFamily    () const;
+    QString  normalFontFamily   () const;
+    QString  boldFontFamily     () const;
 };
+
+#endif

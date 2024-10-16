@@ -8,14 +8,14 @@
  ****************************************************************************/
 
 
-import QtQuick
-import QtQuick.Controls
+import QtQuick              2.3
+import QtQuick.Controls     1.2
 
-import QGroundControl.FactSystem
-import QGroundControl.FactControls
-import QGroundControl.Palette
-import QGroundControl.Controls
-import QGroundControl.ScreenTools
+import QGroundControl.FactSystem    1.0
+import QGroundControl.FactControls  1.0
+import QGroundControl.Palette       1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.ScreenTools   1.0
 
 SetupPage {
     id:             cameraPage
@@ -30,7 +30,7 @@ SetupPage {
 
             FactPanelController { id: controller; }
 
-            QGCPalette { id: qgcPal; colorGroupEnabled: true }
+            QGCPalette { id: palette; colorGroupEnabled: true }
 
             property Fact _mountRetractX:       controller.getParameterFact(-1, "MNT_RETRACT_X")
             property Fact _mountRetractY:       controller.getParameterFact(-1, "MNT_RETRACT_Y")
@@ -219,7 +219,7 @@ SetupPage {
                     QGCLabel {
                         id:         directionLabel
                         text:       qsTr("Gimbal ") + directionTitle
-                        font.bold:   true
+                        font.family: ScreenTools.demiboldFontFamily
                     }
 
                     Rectangle {
@@ -229,7 +229,7 @@ SetupPage {
                         anchors.top:        directionLabel.bottom
                         width:              mountAngMaxField.x + mountAngMaxField.width + _margins
                         height:             servoPWMMaxField.y + servoPWMMaxField.height + _margins
-                        color:              qgcPal.windowShade
+                        color:              palette.windowShade
 
                         FactCheckBox {
                             id:                 mountStabCheckBox
@@ -275,7 +275,7 @@ SetupPage {
                             textRole:           "text"
                             currentIndex:       gimbalOutIndex
 
-                            onActivated: (index) => { setRCFunction(gimbalOutModel.get(index).value, rcFunction) }
+                            onActivated: setRCFunction(gimbalOutModel.get(index).value, rcFunction)
                         }
 
                         QGCLabel {
@@ -404,7 +404,7 @@ SetupPage {
                     QGCLabel {
                         id:             settingsLabel
                         text:           qsTr("Gimbal Settings")
-                        font.bold:      true
+                        font.family:    ScreenTools.demiboldFontFamily
                     }
 
                     Rectangle {
@@ -413,7 +413,7 @@ SetupPage {
                         anchors.top:        settingsLabel.bottom
                         width:              gimbalModeCombo.x + gimbalModeCombo.width + _margins
                         height:             gimbalModeCombo.y + gimbalModeCombo.height + _margins
-                        color:              qgcPal.windowShade
+                        color:              palette.windowShade
 
                         QGCLabel {
                             id:                 gimbalTypeLabel

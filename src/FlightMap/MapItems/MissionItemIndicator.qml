@@ -8,12 +8,12 @@
  ****************************************************************************/
 
 
-import QtQuick
-import QtLocation
+import QtQuick      2.3
+import QtLocation   5.3
 
-import QGroundControl.ScreenTools
-import QGroundControl.Controls
-import QGroundControl.Vehicle
+import QGroundControl.ScreenTools   1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.Vehicle       1.0
 
 /// Marker for displaying a mission item on the map
 MapQuickItem {
@@ -38,7 +38,6 @@ MapQuickItem {
             showGimbalYaw:      !isNaN(missionItem.missionGimbalYaw)
             highlightSelected:  true
             onClicked:          _item.clicked()
-            opacity:            _item.opacity
 
             property bool _isCurrentItem:   missionItem ? missionItem.isCurrentItem || missionItem.hasCurrentChildItem : false
         }

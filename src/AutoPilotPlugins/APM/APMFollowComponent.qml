@@ -8,18 +8,18 @@
  ****************************************************************************/
 
 
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Dialogs
-import QtQuick.Layouts
+import QtQuick          2.3
+import QtQuick.Controls 1.2
+import QtQuick.Dialogs  1.2
+import QtQuick.Layouts  1.2
 
-import QGroundControl
-import QGroundControl.FactSystem
-import QGroundControl.FactControls
-import QGroundControl.Palette
-import QGroundControl.Controls
-import QGroundControl.ScreenTools
-import QGroundControl.Controllers
+import QGroundControl               1.0
+import QGroundControl.FactSystem    1.0
+import QGroundControl.FactControls  1.0
+import QGroundControl.Palette       1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.ScreenTools   1.0
+import QGroundControl.Controllers   1.0
 
 SetupPage {
     id:             followPage
@@ -151,7 +151,7 @@ SetupPage {
             }
 
             function _radiansToHeading(radians) {
-                var geometricAngle = QGroundControl.unitsConversion.radiansToDegrees(radians)
+                var geometricAngle = QGroundControl.radiansToDegrees(radians)
                 var headingAngle = 90 - geometricAngle
                 if (headingAngle < 0) {
                     headingAngle += 360
@@ -163,7 +163,7 @@ SetupPage {
 
             function _headingToRadians(heading) {
                 var geometricAngle = -(heading - 90)
-                return QGroundControl.unitsConversion.degreesToRadians(geometricAngle)
+                return QGroundControl.degreesToRadians(geometricAngle)
             }
 
             APMFollowComponentController {
@@ -251,7 +251,7 @@ SetupPage {
                             Layout.fillWidth:   true
                             model:              [ qsTr("Maintain Current Offsets"), qsTr("Specify Offsets")]
 
-                            onActivated: (index) => {
+                            onActivated: {
                                 if (index == 0) {
                                     _followOffsetX.rawValue = _followOffsetY.rawValue = _followOffsetZ.rawValue = 0
                                     _setUIFromParams()
@@ -270,7 +270,7 @@ SetupPage {
                             Layout.fillWidth:       true
                             model:                  rgText
                             visible:                !_roverFirmware
-                            onActivated: (index) => { _followYawBehavior.rawValue = rgValues[index] }
+                            onActivated:            _followYawBehavior.rawValue = rgValues[index]
 
                             property var rgText:    [ qsTr("Maintain current vehicle orientation"), qsTr("Point at ground station location"), qsTr("Same direction as ground station movement") ]
                             property var rgValues:  [ _followYawBehaviorNone, _followYawBehaviorFace, _followYawBehaviorFlight ]
@@ -419,7 +419,7 @@ SetupPage {
                         QGCLabel {
                             id:                 distanceLabel
                             anchors.centerIn:   distanceLine
-                            text:               controller.distance.valueString + " " + QGroundControl.unitsConversion.appSettingsHorizontalDistanceUnitsString
+                            text:               controller.distance.valueString + " " + QGroundControl.appSettingsDistanceUnitsString
 
                             transform: Rotation {
                                 origin.x:       distanceLabel.width  / 2
@@ -432,7 +432,7 @@ SetupPage {
                     MouseArea {
                         anchors.fill: parent
 
-                        onClicked: (mouse) => {
+                        onClicked: {
                             // Translate x,y to centered
                             var x = mouse.x - (width / 2)
                             var y = (height - mouse.y) - (height / 2)
@@ -497,7 +497,7 @@ SetupPage {
                         QGCLabel {
                             id:                 heightValueLabel
                             anchors.centerIn:   parent
-                            text:               controller.height.valueString + " " + QGroundControl.unitsConversion.appSettingsHorizontalDistanceUnitsString
+                            text:               controller.height.valueString + " " + QGroundControl.appSettingsDistanceUnitsString
                         }
                     }
 

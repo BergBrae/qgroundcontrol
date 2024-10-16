@@ -8,16 +8,16 @@
  ****************************************************************************/
 
 
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+import QtQuick          2.3
+import QtQuick.Controls 1.2
+import QtQuick.Layouts  1.2
 
-import QGroundControl.FactSystem
-import QGroundControl.FactControls
-import QGroundControl.Palette
-import QGroundControl.Controls
-import QGroundControl.Controllers
-import QGroundControl.ScreenTools
+import QGroundControl.FactSystem    1.0
+import QGroundControl.FactControls  1.0
+import QGroundControl.Palette       1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.Controllers   1.0
+import QGroundControl.ScreenTools   1.0
 
 SetupPage {
     id:             flightModePage
@@ -56,7 +56,7 @@ SetupPage {
                 QGCLabel {
                     id:             flightModeLabel
                     text:           qsTr("Flight Mode Settings") + (_fltmodeChExists ? "" : qsTr(" (Channel 5)"))
-                    font.bold:      true
+                    font.family:    ScreenTools.demiboldFontFamily
                 }
 
                 Rectangle {
@@ -90,7 +90,7 @@ SetupPage {
                                     qsTr("Channel 6"),    qsTr("Channel 7"), qsTr("Channel 8") ]
 
                                 currentIndex:   _fltmodeCh.value
-                                onActivated: (index) => { _fltmodeCh.value = index }
+                                onActivated:    _fltmodeCh.value = index
                             }
                         }
 
@@ -170,7 +170,7 @@ SetupPage {
                             QGCComboBox {
                                 model:          controller.simpleModeNames
                                 currentIndex:   controller.simpleMode
-                                onActivated: (index) => { controller.simpleMode = index }
+                                onActivated:    controller.simpleMode = index
                             }
                         }
                     } // Column - Flight Modes
@@ -183,7 +183,7 @@ SetupPage {
                 QGCLabel {
                     id:                 channelOptionsLabel
                     text:               qsTr("Switch Options")
-                    font.bold:          true
+                    font.family:        ScreenTools.demiboldFontFamily
                 }
 
                 Rectangle {
@@ -211,7 +211,7 @@ SetupPage {
                                 QGCLabel {
                                     anchors.baseline:   optCombo.baseline
                                     text:               qsTr("Channel option %1 :").arg(index)
-                                    color:              controller.channelOptionEnabled[modelData + (_ch7OptAvailable ? 1 : 0)] ? "yellow" : qgcPal.text
+                                    color:              controller.channelOptionEnabled[modelData] ? "yellow" : qgcPal.text
                                 }
 
                                 FactComboBox {

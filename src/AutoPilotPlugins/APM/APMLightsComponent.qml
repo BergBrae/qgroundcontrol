@@ -8,15 +8,15 @@
  ****************************************************************************/
 
 
-import QtQuick
-import QtQuick.Controls
+import QtQuick              2.3
+import QtQuick.Controls     1.2
 
-import QGroundControl
-import QGroundControl.FactSystem
-import QGroundControl.FactControls
-import QGroundControl.Palette
-import QGroundControl.Controls
-import QGroundControl.ScreenTools
+import QGroundControl               1.0
+import QGroundControl.FactSystem    1.0
+import QGroundControl.FactControls  1.0
+import QGroundControl.Palette       1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.ScreenTools   1.0
 
 SetupPage {
     id:                 lightsPage
@@ -43,8 +43,6 @@ SetupPage {
             property Fact _rc12Function:        controller.getParameterFact(-1, "SERVO12_FUNCTION")
             property Fact _rc13Function:        controller.getParameterFact(-1, "SERVO13_FUNCTION")
             property Fact _rc14Function:        controller.getParameterFact(-1, "SERVO14_FUNCTION")
-            property Fact _rc15Function:        controller.getParameterFact(-1, "SERVO15_FUNCTION")
-            property Fact _rc16Function:        controller.getParameterFact(-1, "SERVO16_FUNCTION")
             property Fact _stepSize:            _oldFW ? controller.getParameterFact(-1, "JS_LIGHTS_STEP") : null // v3.5.1 and prior
             property Fact _numSteps:            _oldFW ? null : controller.getParameterFact(-1, "JS_LIGHTS_STEPS") // v3.5.2 and up
 
@@ -53,7 +51,7 @@ SetupPage {
             readonly property int   _rcFunctionRCIN9:               59
             readonly property int   _rcFunctionRCIN10:              60
             readonly property int   _firstLightsOutChannel:         5
-            readonly property int   _lastLightsOutChannel:          16
+            readonly property int   _lastLightsOutChannel:          14
 
             Component.onCompleted: {
                 calcLightOutValues()
@@ -167,7 +165,7 @@ SetupPage {
                     QGCLabel {
                         id:             settingsLabel
                         text:           qsTr("Light Output Channels")
-                        font.bold:      true
+                        font.family:    ScreenTools.demiboldFontFamily
                     }
 
                     Rectangle {
@@ -196,7 +194,7 @@ SetupPage {
                             textRole:           "text"
                             currentIndex:       lights1OutIndex
 
-                            onActivated: (index) => { setRCFunction(lightsOutModel.get(index).value, lights1Function) }
+                            onActivated: setRCFunction(lightsOutModel.get(index).value, lights1Function)
                         }
 
                         QGCLabel {
@@ -217,7 +215,7 @@ SetupPage {
                             textRole:           "text"
                             currentIndex:       lights2OutIndex
 
-                            onActivated: (index) => { setRCFunction(lightsOutModel.get(index).value, lights2Function) }
+                            onActivated: setRCFunction(lightsOutModel.get(index).value, lights2Function)
                         }
 
                         QGCLabel {
@@ -237,7 +235,7 @@ SetupPage {
                             model:              [1,2,3,4,5,6,7,8,9,10]
                             currentIndex:       lightsSteps-1
 
-                            onActivated: (index) => { calcStepSize(index+1) }
+                            onActivated: calcStepSize(index+1)
                         }
                     } // Rectangle
                 } // Item

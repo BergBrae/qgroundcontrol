@@ -1,28 +1,18 @@
-/****************************************************************************
+/*!
+ * @file
+ *   @brief Camera Controller
+ *   @author Gus Grubba <gus@auterion.com>
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
+ */
 
-#include "MavlinkCameraControl.h"
+#include "QGCCameraControl.h"
 #include "QGCCameraIO.h"
-#include "QGCLoggingCategory.h"
-#include "QGCApplication.h"
-#include "QGCToolbox.h"
-#include "LinkInterface.h"
-#include "MAVLinkProtocol.h"
-#include "Vehicle.h"
-
-#include <QtQml/QQmlEngine>
 
 QGC_LOGGING_CATEGORY(CameraIOLog, "CameraIOLog")
 QGC_LOGGING_CATEGORY(CameraIOLogVerbose, "CameraIOLogVerbose")
 
 //-----------------------------------------------------------------------------
-QGCCameraParamIO::QGCCameraParamIO(MavlinkCameraControl *control, Fact* fact, Vehicle *vehicle)
+QGCCameraParamIO::QGCCameraParamIO(QGCCameraControl *control, Fact* fact, Vehicle *vehicle)
     : QObject(control)
     , _control(control)
     , _fact(fact)
@@ -86,6 +76,7 @@ QGCCameraParamIO::QGCCameraParamIO(MavlinkCameraControl *control, Fact* fact, Ve
             break;
         default:
             qWarning() << "Unsupported fact type" << _fact->type() << "for" << _fact->name();
+            //-- Fall Through (screw clang)
         case FactMetaData::valueTypeInt32:
             _mavParamType = MAV_PARAM_EXT_TYPE_INT32;
             break;
@@ -140,15 +131,13 @@ QGCCameraParamIO::sendParameter(bool updateUI)
 void
 QGCCameraParamIO::_sendParameter()
 {
-    SharedLinkInterfacePtr sharedLink = _vehicle->vehicleLinkManager()->primaryLink().lock();
-    if (sharedLink) {
-        mavlink_param_ext_set_t p;
-        memset(&p, 0, sizeof(mavlink_param_ext_set_t));
-        param_ext_union_t   union_value;
-        mavlink_message_t   msg;
-        FactMetaData::ValueType_t factType = _fact->type();
-        p.param_type = _mavParamType;
-        switch (factType) {
+    mavlink_param_ext_set_t p;
+    memset(&p, 0, sizeof(mavlink_param_ext_set_t));
+    param_ext_union_t   union_value;
+    mavlink_message_t   msg;
+    FactMetaData::ValueType_t factType = _fact->type();
+    p.param_type = _mavParamType;
+    switch (factType) {
         case FactMetaData::valueTypeUint8:
         case FactMetaData::valueTypeBool:
             union_value.param_uint8 = static_cast<uint8_t>(_fact->rawValue().toUInt());
@@ -180,29 +169,29 @@ QGCCameraParamIO::_sendParameter()
             //-- String and custom are the same for now
         case FactMetaData::valueTypeString:
         case FactMetaData::valueTypeCustom:
-        {
-            QByteArray custom = _fact->rawValue().toByteArray();
-            memcpy(union_value.bytes, custom.data(), static_cast<size_t>(std::max(custom.size(), static_cast<qsizetype>(MAVLINK_MSG_PARAM_EXT_SET_FIELD_PARAM_VALUE_LEN))));
-        }
+            {
+                QByteArray custom = _fact->rawValue().toByteArray();
+                memcpy(union_value.bytes, custom.data(), static_cast<size_t>(std::max(custom.size(), MAVLINK_MSG_PARAM_EXT_SET_FIELD_PARAM_VALUE_LEN)));
+            }
             break;
         default:
             qCritical() << "Unsupported fact type" << factType << "for" << _fact->name();
+            //-- Fall Through (screw clang)
         case FactMetaData::valueTypeInt32:
             union_value.param_int32 = static_cast<int32_t>(_fact->rawValue().toInt());
             break;
-        }
-        memcpy(&p.param_value[0], &union_value.bytes[0], MAVLINK_MSG_PARAM_EXT_SET_FIELD_PARAM_VALUE_LEN);
-        p.target_system     = static_cast<uint8_t>(_vehicle->id());
-        p.target_component  = static_cast<uint8_t>(_control->compID());
-        strncpy(p.param_id, _fact->name().toStdString().c_str(), MAVLINK_MSG_PARAM_EXT_SET_FIELD_PARAM_ID_LEN);
-        mavlink_msg_param_ext_set_encode_chan(
-                    static_cast<uint8_t>(_pMavlink->getSystemId()),
-                    static_cast<uint8_t>(_pMavlink->getComponentId()),
-                    sharedLink->mavlinkChannel(),
-                    &msg,
-                    &p);
-        _vehicle->sendMessageOnLinkThreadSafe(sharedLink.get(), msg);
     }
+    memcpy(&p.param_value[0], &union_value.bytes[0], MAVLINK_MSG_PARAM_EXT_SET_FIELD_PARAM_VALUE_LEN);
+    p.target_system     = static_cast<uint8_t>(_vehicle->id());
+    p.target_component  = static_cast<uint8_t>(_control->compID());
+    strncpy(p.param_id, _fact->name().toStdString().c_str(), MAVLINK_MSG_PARAM_EXT_SET_FIELD_PARAM_ID_LEN);
+    mavlink_msg_param_ext_set_encode_chan(
+        static_cast<uint8_t>(_pMavlink->getSystemId()),
+        static_cast<uint8_t>(_pMavlink->getComponentId()),
+        _vehicle->priorityLink()->mavlinkChannel(),
+        &msg,
+        &p);
+    _vehicle->sendMessageOnLink(_vehicle->priorityLink(), msg);
     _paramWriteTimer.start();
 }
 
@@ -362,22 +351,19 @@ QGCCameraParamIO::paramRequest(bool reset)
         _forceUIUpdate  = true;
     }
     qCDebug(CameraIOLog) << "Request parameter:" << _fact->name();
-    SharedLinkInterfacePtr sharedLink = _vehicle->vehicleLinkManager()->primaryLink().lock();
-    if (sharedLink) {
-        char param_id[MAVLINK_MSG_PARAM_EXT_REQUEST_READ_FIELD_PARAM_ID_LEN + 1];
-        memset(param_id, 0, sizeof(param_id));
-        strncpy(param_id, _fact->name().toStdString().c_str(), MAVLINK_MSG_PARAM_EXT_REQUEST_READ_FIELD_PARAM_ID_LEN);
-        mavlink_message_t msg;
-        mavlink_msg_param_ext_request_read_pack_chan(
-                    static_cast<uint8_t>(_pMavlink->getSystemId()),
-                    static_cast<uint8_t>(_pMavlink->getComponentId()),
-                    sharedLink->mavlinkChannel(),
-                    &msg,
-                    static_cast<uint8_t>(_vehicle->id()),
-                    static_cast<uint8_t>(_control->compID()),
-                    param_id,
-                    -1);
-        _vehicle->sendMessageOnLinkThreadSafe(sharedLink.get(), msg);
-    }
+    char param_id[MAVLINK_MSG_PARAM_EXT_REQUEST_READ_FIELD_PARAM_ID_LEN + 1];
+    memset(param_id, 0, sizeof(param_id));
+    strncpy(param_id, _fact->name().toStdString().c_str(), MAVLINK_MSG_PARAM_EXT_REQUEST_READ_FIELD_PARAM_ID_LEN);
+    mavlink_message_t msg;
+    mavlink_msg_param_ext_request_read_pack_chan(
+        static_cast<uint8_t>(_pMavlink->getSystemId()),
+        static_cast<uint8_t>(_pMavlink->getComponentId()),
+        _vehicle->priorityLink()->mavlinkChannel(),
+        &msg,
+        static_cast<uint8_t>(_vehicle->id()),
+        static_cast<uint8_t>(_control->compID()),
+        param_id,
+        -1);
+    _vehicle->sendMessageOnLink(_vehicle->priorityLink(), msg);
     _paramRequestTimer.start();
 }

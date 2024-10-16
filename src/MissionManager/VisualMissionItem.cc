@@ -1,32 +1,38 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
  *
  ****************************************************************************/
 
+
+#include <QStringList>
+#include <QDebug>
+
 #include "VisualMissionItem.h"
+#include "FirmwarePluginManager.h"
+#include "QGCApplication.h"
+#include "JsonHelper.h"
 #include "TerrainQuery.h"
-#include "PlanMasterController.h"
-#include "Vehicle.h"
-#include "QGC.h"
+#include "TakeoffMissionItem.h"
 
-// All VisualMissionItem derived classes are parented to masterController in order to tie their lifecycles together.
+const char* VisualMissionItem::jsonTypeKey =                "type";
+const char* VisualMissionItem::jsonTypeSimpleItemValue =    "SimpleItem";
+const char* VisualMissionItem::jsonTypeComplexItemValue =   "ComplexItem";
 
-VisualMissionItem::VisualMissionItem(PlanMasterController* masterController, bool flyView)
-    : QObject           (masterController)
-    , _flyView          (flyView)
-    , _masterController (masterController)
-    , _missionController(masterController->missionController())
-    , _controllerVehicle(masterController->controllerVehicle())
+VisualMissionItem::VisualMissionItem(Vehicle* vehicle, bool flyView, QObject* parent)
+    : QObject                   (parent)
+    , _vehicle                  (vehicle)
+    , _flyView                  (flyView)
 {
     _commonInit();
 }
 
-VisualMissionItem::VisualMissionItem(const VisualMissionItem& other, bool flyView)
-    : QObject                   (other._masterController)
+VisualMissionItem::VisualMissionItem(const VisualMissionItem& other, bool flyView, QObject* parent)
+    : QObject                   (parent)
+    , _vehicle                  (nullptr)
     , _flyView                  (flyView)
 {
     *this = other;
@@ -37,8 +43,7 @@ VisualMissionItem::VisualMissionItem(const VisualMissionItem& other, bool flyVie
 void VisualMissionItem::_commonInit(void)
 {
     // Don't get terrain altitude information for submarines or boats
-    Vehicle* controllerVehicle = _masterController->controllerVehicle();
-    if (controllerVehicle->vehicleType() != MAV_TYPE_SUBMARINE && controllerVehicle->vehicleType() != MAV_TYPE_SURFACE_BOAT) {
+    if (_vehicle->vehicleType() != MAV_TYPE_SUBMARINE && _vehicle->vehicleType() != MAV_TYPE_SURFACE_BOAT) {
         _updateTerrainTimer.setInterval(500);
         _updateTerrainTimer.setSingleShot(true);
         connect(&_updateTerrainTimer, &QTimer::timeout, this, &VisualMissionItem::_reallyUpdateTerrainAltitude);
@@ -49,10 +54,7 @@ void VisualMissionItem::_commonInit(void)
 
 const VisualMissionItem& VisualMissionItem::operator=(const VisualMissionItem& other)
 {
-    setParent(other._masterController);
-
-    _masterController = other._masterController;
-    _controllerVehicle = other._controllerVehicle;
+    _vehicle = other._vehicle;
 
     setIsCurrentItem(other._isCurrentItem);
     setDirty(other._dirty);
@@ -63,7 +65,6 @@ const VisualMissionItem& VisualMissionItem::operator=(const VisualMissionItem& o
     setTerrainPercent(other._terrainPercent);
     setAzimuth(other._azimuth);
     setDistance(other._distance);
-    setDistanceFromStart(other._distance);
 
     return *this;
 }
@@ -90,23 +91,15 @@ void VisualMissionItem::setHasCurrentChildItem(bool hasCurrentChildItem)
 
 void VisualMissionItem::setDistance(double distance)
 {
-    if (!QGC::fuzzyCompare(_distance, distance)) {
+    if (!qFuzzyCompare(_distance, distance)) {
         _distance = distance;
         emit distanceChanged(_distance);
     }
 }
 
-void VisualMissionItem::setDistanceFromStart(double distanceFromStart)
-{
-    if (!QGC::fuzzyCompare(_distanceFromStart, distanceFromStart)) {
-        _distanceFromStart = distanceFromStart;
-        emit distanceFromStartChanged(_distanceFromStart);
-    }
-}
-
 void VisualMissionItem::setAltDifference(double altDifference)
 {
-    if (!QGC::fuzzyCompare(_altDifference, altDifference)) {
+    if (!qFuzzyCompare(_altDifference, altDifference)) {
         _altDifference = altDifference;
         emit altDifferenceChanged(_altDifference);
     }
@@ -114,7 +107,7 @@ void VisualMissionItem::setAltDifference(double altDifference)
 
 void VisualMissionItem::setAltPercent(double altPercent)
 {
-    if (!QGC::fuzzyCompare(_altPercent, altPercent)) {
+    if (!qFuzzyCompare(_altPercent, altPercent)) {
         _altPercent = altPercent;
         emit altPercentChanged(_altPercent);
     }
@@ -122,7 +115,7 @@ void VisualMissionItem::setAltPercent(double altPercent)
 
 void VisualMissionItem::setTerrainPercent(double terrainPercent)
 {
-    if (!QGC::fuzzyCompare(_terrainPercent, terrainPercent)) {
+    if (!qFuzzyCompare(_terrainPercent, terrainPercent)) {
         _terrainPercent = terrainPercent;
         emit terrainPercentChanged(terrainPercent);
     }
@@ -138,7 +131,7 @@ void VisualMissionItem::setTerrainCollision(bool terrainCollision)
 
 void VisualMissionItem::setAzimuth(double azimuth)
 {
-    if (!QGC::fuzzyCompare(_azimuth, azimuth)) {
+    if (!qFuzzyCompare(_azimuth, azimuth)) {
         _azimuth = azimuth;
         emit azimuthChanged(_azimuth);
     }
@@ -146,19 +139,19 @@ void VisualMissionItem::setAzimuth(double azimuth)
 
 void VisualMissionItem::setMissionFlightStatus(MissionController::MissionFlightStatus_t& missionFlightStatus)
 {
-    if (!QGC::fuzzyCompare(missionFlightStatus.gimbalYaw, _missionGimbalYaw)) {
-        _missionGimbalYaw = missionFlightStatus.gimbalYaw;
-        emit missionGimbalYawChanged(_missionGimbalYaw);
+    _missionFlightStatus = missionFlightStatus;
+    if (qIsNaN(_missionFlightStatus.gimbalYaw) && qIsNaN(_missionGimbalYaw)) {
+        return;
     }
-    if (missionFlightStatus.vtolMode != _previousVTOLMode) {
-        _previousVTOLMode = missionFlightStatus.vtolMode;
-        emit previousVTOLModeChanged();
+    if (_missionFlightStatus.gimbalYaw != _missionGimbalYaw) {
+        _missionGimbalYaw = _missionFlightStatus.gimbalYaw;
+        emit missionGimbalYawChanged(_missionGimbalYaw);
     }
 }
 
 void VisualMissionItem::setMissionVehicleYaw(double vehicleYaw)
 {
-    if (!QGC::fuzzyCompare(_missionVehicleYaw, vehicleYaw)) {
+    if (!qFuzzyCompare(_missionVehicleYaw, vehicleYaw)) {
         _missionVehicleYaw = vehicleYaw;
         emit missionVehicleYawChanged(_missionVehicleYaw);
     }
@@ -170,31 +163,29 @@ void VisualMissionItem::_updateTerrainAltitude(void)
         // This is an intermediate state we don't react to
         return;
     }
-
-    _terrainAltitude = qQNaN();
-    emit terrainAltitudeChanged(qQNaN());
-
     if (!_flyView && specifiesCoordinate() && coordinate().isValid()) {
-        // We use a timer so that any additional requests before the timer fires result in only a single request
-        _updateTerrainTimer.start();
+        if (specifiesCoordinate()) {
+            if (coordinate().isValid()) {
+                // We use a timer so that any additional requests before the timer fires result in only a single request
+                _updateTerrainTimer.start();
+            }
+        } else {
+            _terrainAltitude = qQNaN();
+        }
     }
 }
 
 void VisualMissionItem::_reallyUpdateTerrainAltitude(void)
 {
     QGeoCoordinate coord = coordinate();
-    if (specifiesCoordinate() && coord.isValid() && (qIsNaN(_terrainAltitude) || !QGC::fuzzyCompare(_lastLatTerrainQuery, coord.latitude()) || !QGC::fuzzyCompare(_lastLonTerrainQuery, coord.longitude()))) {
+    if (specifiesCoordinate() && coord.isValid() && (qIsNaN(_terrainAltitude) || !qFuzzyCompare(_lastLatTerrainQuery, coord.latitude()) || qFuzzyCompare(_lastLonTerrainQuery, coord.longitude()))) {
         _lastLatTerrainQuery = coord.latitude();
         _lastLonTerrainQuery = coord.longitude();
-        if (_currentTerrainAtCoordinateQuery) {
-            disconnect(_currentTerrainAtCoordinateQuery, &TerrainAtCoordinateQuery::terrainDataReceived, this, &VisualMissionItem::_terrainDataReceived);
-            _currentTerrainAtCoordinateQuery = nullptr;
-        }
-        _currentTerrainAtCoordinateQuery = new TerrainAtCoordinateQuery(true /* autoDelet */);
-        connect(_currentTerrainAtCoordinateQuery, &TerrainAtCoordinateQuery::terrainDataReceived, this, &VisualMissionItem::_terrainDataReceived);
+        TerrainAtCoordinateQuery* terrain = new TerrainAtCoordinateQuery(this);
+        connect(terrain, &TerrainAtCoordinateQuery::terrainDataReceived, this, &VisualMissionItem::_terrainDataReceived);
         QList<QGeoCoordinate> rgCoord;
         rgCoord.append(coordinate());
-        _currentTerrainAtCoordinateQuery->requestData(rgCoord);
+        terrain->requestData(rgCoord);
     }
 }
 
@@ -202,7 +193,7 @@ void VisualMissionItem::_terrainDataReceived(bool success, QList<double> heights
 {
     _terrainAltitude = success ? heights[0] : qQNaN();
     emit terrainAltitudeChanged(_terrainAltitude);
-    _currentTerrainAtCoordinateQuery = nullptr;
+    sender()->deleteLater();
 }
 
 void VisualMissionItem::_setBoundingCube(QGCGeoBoundingCube bc)
@@ -227,14 +218,4 @@ void VisualMissionItem::setParentItem(VisualMissionItem* parentItem)
         _parentItem = parentItem;
         emit parentItemChanged(parentItem);
     }
-}
-
-void VisualMissionItem::_amslEntryAltChanged(void)
-{
-    emit amslEntryAltChanged(amslEntryAlt());
-}
-
-void VisualMissionItem::_amslExitAltChanged(void)
-{
-    emit amslExitAltChanged(amslExitAlt());
 }

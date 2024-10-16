@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,21 +9,26 @@
 
 
 #include "QGCFileDialogController.h"
-#include "QGCLoggingCategory.h"
-#include "QGCApplication.h"
-#include "SettingsManager.h"
-#include <QtCore/QDir>
+
+#include <QStandardPaths>
+#include <QDebug>
+#include <QDir>
 
 QGC_LOGGING_CATEGORY(QGCFileDialogControllerLog, "QGCFileDialogControllerLog")
 
-QStringList QGCFileDialogController::getFiles(const QString& directoryPath, const QStringList& nameFilters)
+QStringList QGCFileDialogController::getFiles(const QString& directoryPath, const QStringList& fileExtensions)
 {
-    qCDebug(QGCFileDialogControllerLog) << "getFiles" << directoryPath << nameFilters;
+    qCDebug(QGCFileDialogControllerLog) << "getFiles" << directoryPath << fileExtensions;
     QStringList files;
 
     QDir fileDir(directoryPath);
 
-    QFileInfoList fileInfoList = fileDir.entryInfoList(nameFilters,  QDir::Files, QDir::Name);
+    QStringList infoListExtensions;
+    for (const QString& extension: fileExtensions) {
+        infoListExtensions.append(QStringLiteral("*.%1").arg(extension));
+    }
+
+    QFileInfoList fileInfoList = fileDir.entryInfoList(infoListExtensions,  QDir::Files, QDir::Name);
 
     for (const QFileInfo& fileInfo: fileInfoList) {
         qCDebug(QGCFileDialogControllerLog) << "getFiles found" << fileInfo.fileName();
@@ -33,75 +38,37 @@ QStringList QGCFileDialogController::getFiles(const QString& directoryPath, cons
     return files;
 }
 
+QString QGCFileDialogController::filenameWithExtension(const QString& filename, const QStringList& rgFileExtensions)
+{
+    QString filenameWithExtension(filename);
+
+    bool matchFound = false;
+    for (const QString& extension : rgFileExtensions) {
+        QString dotExtension = QStringLiteral(".%1").arg(extension);
+        matchFound = filenameWithExtension.endsWith(dotExtension);
+        if (matchFound) {
+            break;
+        }
+    }
+
+    if (!matchFound) {
+        filenameWithExtension += QStringLiteral(".%1").arg(rgFileExtensions[0]);
+    }
+
+    return filenameWithExtension;
+}
+
 bool QGCFileDialogController::fileExists(const QString& filename)
 {
     return QFile(filename).exists();
 }
 
-QString QGCFileDialogController::fullyQualifiedFilename(const QString& directoryPath, const QString& filename, const QStringList& nameFilters)
+QString QGCFileDialogController::fullyQualifiedFilename(const QString& directoryPath, const QString& filename, const QStringList& rgFileExtensions)
 {
-    QString firstFileExtention;
-
-    // Check that the filename has one of the specified file extensions
-
-    bool extensionFound = true;
-    if (nameFilters.count()) {
-        extensionFound = false;
-        for (const QString& nameFilter: nameFilters) {
-            if (nameFilter.startsWith("*.")) {
-                QString fileExtension = nameFilter.right(nameFilter.length() - 2);
-                if (fileExtension != "*") {
-                    if (firstFileExtention.isEmpty()) {
-                        firstFileExtention = fileExtension;
-                    }
-                    if (filename.endsWith(fileExtension)) {
-                        extensionFound = true;
-                        break;
-                    }
-                }
-            } else if (nameFilter != "*") {
-                qCWarning(QGCFileDialogControllerLog) << "unsupported name filter format" << nameFilter;
-            }
-        }
-    }
-
-    // Add the extension if it is missing
-    QString filenameWithExtension = filename;
-    if (!extensionFound) {
-        filenameWithExtension = QStringLiteral("%1.%2").arg(filename).arg(firstFileExtention);
-    }
-
-    return directoryPath + QStringLiteral("/") + filenameWithExtension;
+    return directoryPath + QStringLiteral("/") + filenameWithExtension(filename, rgFileExtensions);
 }
 
 void QGCFileDialogController::deleteFile(const QString& filename)
 {
     QFile::remove(filename);
-}
-
-QString QGCFileDialogController::fullFolderPathToShortMobilePath(const QString& fullFolderPath)
-{
-#ifdef __mobile__
-    QString defaultSavePath = qgcApp()->toolbox()->settingsManager()->appSettings()->savePath()->rawValueString();
-    if (fullFolderPath.startsWith(defaultSavePath)) {
-        int lastDirSepIndex = fullFolderPath.lastIndexOf(QStringLiteral("/"));
-        return QCoreApplication::applicationName() + QStringLiteral("/") + fullFolderPath.right(fullFolderPath.length() - lastDirSepIndex);
-    } else {
-        return fullFolderPath;
-    }
-#else
-    qWarning() << "QGCFileDialogController::fullFolderPathToShortMobilePath should only be used in mobile builds";
-    return fullFolderPath;
-#endif
-}
-
-QString QGCFileDialogController::urlToLocalFile(QUrl url)
-{
-    // For some strange reason on Qt6 running on Linux files returned by FileDialog are not returned as local file urls.
-    // Seems to be new behavior with Qt6.
-    if (url.isLocalFile()) {
-        return url.toLocalFile();
-    } else {
-        return url.toString();
-    }
 }

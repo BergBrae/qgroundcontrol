@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -12,14 +12,12 @@
 /// @author Gus Grubba <gus@auterion.com>
 
 #include "ScreenToolsController.h"
-#include "QGCApplication.h"
-#include <QtGui/QFontDatabase>
-#include <QtGui/QFontMetrics>
-#include <QtGui/QInputDevice>
+#include <QFontDatabase>
+#include <QScreen>
 
 #include "SettingsManager.h"
 
-#if defined(Q_OS_IOS)
+#if defined(__ios__)
 #include <sys/utsname.h>
 #endif
 
@@ -31,18 +29,13 @@ ScreenToolsController::ScreenToolsController()
 bool
 ScreenToolsController::hasTouch() const
 {
-    for (const auto& inputDevice: QInputDevice::devices()) {
-        if (inputDevice->type() == QInputDevice::DeviceType::TouchScreen) {
-            return true;
-        }
-    }
-    return false;
+    return QTouchDevice::devices().count() > 0 || isMobile();
 }
 
 QString
 ScreenToolsController::iOSDevice() const
 {
-#if defined(Q_OS_IOS)
+#if defined(__ios__)
     struct utsname systemInfo;
     uname(&systemInfo);
     return QString(systemInfo.machine);
@@ -61,19 +54,22 @@ QString
 ScreenToolsController::normalFontFamily() const
 {
     //-- See App.SettinsGroup.json for index
-    int langID = qgcApp()->toolbox()->settingsManager()->appSettings()->qLocaleLanguage()->rawValue().toInt();
-    if(langID == QLocale::Korean) {
-        return QString("NanumGothic");
+    int langID = qgcApp()->toolbox()->settingsManager()->appSettings()->language()->rawValue().toInt();
+    if(langID == 6 /*Korean*/) {
+        return QString("fonts/NanumGothic-Regular");
     } else {
-        return QString("Open Sans");
+        return QString("opensans");
     }
 }
 
-double ScreenToolsController::defaultFontDescent(int pointSize) const
+QString
+ScreenToolsController::boldFontFamily() const
 {
-    return QFontMetrics(QFont(normalFontFamily(), pointSize)).descent();
+    //-- See App.SettinsGroup.json for index
+    int langID = qgcApp()->toolbox()->settingsManager()->appSettings()->language()->rawValue().toInt();
+    if(langID == 6 /*Korean*/) {
+        return QString("NanumGothic-Bold");
+    } else {
+        return QString("opensans-demibold");
+    }
 }
-
-#ifndef __mobile__
-bool ScreenToolsController::fakeMobile() const { return qgcApp()->fakeMobile(); }
-#endif

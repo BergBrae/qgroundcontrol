@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -8,22 +8,26 @@
  ****************************************************************************/
 
 #include "MultiVehicleManager.h"
+#include "AutoPilotPlugin.h"
 #include "MAVLinkProtocol.h"
+#include "UAS.h"
 #include "QGCApplication.h"
+#include "FollowMe.h"
+#include "QGroundControlQmlGlobal.h"
 #include "ParameterManager.h"
 #include "SettingsManager.h"
 #include "QGCCorePlugin.h"
 #include "QGCOptions.h"
-#include "LinkManager.h"
-#include "Vehicle.h"
-#if defined (Q_OS_IOS) || defined(Q_OS_ANDROID)
+
+#if defined (__ios__) || defined(__android__)
 #include "MobileScreenMgr.h"
 #endif
-#include "QGCLoggingCategory.h"
 
-#include <QtQml/QQmlEngine>
+#include <QQmlEngine>
 
 QGC_LOGGING_CATEGORY(MultiVehicleManagerLog, "MultiVehicleManagerLog")
+
+const char* MultiVehicleManager::_gcsHeartbeatEnabledKey = "gcsHeartbeatEnabled";
 
 MultiVehicleManager::MultiVehicleManager(QGCApplication* app, QGCToolbox* toolbox)
     : QGCTool(app, toolbox)
@@ -37,9 +41,15 @@ MultiVehicleManager::MultiVehicleManager(QGCApplication* app, QGCToolbox* toolbo
     , _gcsHeartbeatEnabled(true)
 {
     QSettings settings;
+
     _gcsHeartbeatEnabled = settings.value(_gcsHeartbeatEnabledKey, true).toBool();
+
     _gcsHeartbeatTimer.setInterval(_gcsHeartbeatRateMSecs);
     _gcsHeartbeatTimer.setSingleShot(false);
+    connect(&_gcsHeartbeatTimer, &QTimer::timeout, this, &MultiVehicleManager::_sendGCSHeartbeat);
+    if (_gcsHeartbeatEnabled) {
+        _gcsHeartbeatTimer.start();
+    }
 }
 
 void MultiVehicleManager::setToolbox(QGCToolbox *toolbox)
@@ -52,42 +62,39 @@ void MultiVehicleManager::setToolbox(QGCToolbox *toolbox)
 
     QQmlEngine::setObjectOwnership(this, QQmlEngine::CppOwnership);
     qmlRegisterUncreatableType<MultiVehicleManager>("QGroundControl.MultiVehicleManager", 1, 0, "MultiVehicleManager", "Reference only");
-    qmlRegisterUncreatableType<Vehicle>            ("QGroundControl.Vehicle",             1, 0, "Vehicle",             "Reference only");
-    qmlRegisterUncreatableType<VehicleLinkManager> ("QGroundControl.Vehicle",             1, 0, "VehicleLinkManager",  "Reference only");
-
-    qRegisterMetaType<Vehicle::MavCmdResultFailureCode_t>("MavCmdResultFailureCode_t");
 
     connect(_mavlinkProtocol, &MAVLinkProtocol::vehicleHeartbeatInfo, this, &MultiVehicleManager::_vehicleHeartbeatInfo);
-    connect(&_gcsHeartbeatTimer, &QTimer::timeout, this, &MultiVehicleManager::_sendGCSHeartbeat);
 
-    if (_gcsHeartbeatEnabled) {
-        _gcsHeartbeatTimer.start();
-    }
-
-    _offlineEditingVehicle = new Vehicle(Vehicle::MAV_AUTOPILOT_TRACK, Vehicle::MAV_TYPE_TRACK, _firmwarePluginManager, this);
+    SettingsManager* settingsManager = toolbox->settingsManager();
+    _offlineEditingVehicle = new Vehicle(static_cast<MAV_AUTOPILOT>(settingsManager->appSettings()->offlineEditingFirmwareType()->rawValue().toInt()),
+                                         static_cast<MAV_TYPE>(settingsManager->appSettings()->offlineEditingVehicleType()->rawValue().toInt()),
+                                         _firmwarePluginManager,
+                                         this);
 }
 
 void MultiVehicleManager::_vehicleHeartbeatInfo(LinkInterface* link, int vehicleId, int componentId, int vehicleFirmwareType, int vehicleType)
 {
-    if (componentId != MAV_COMP_ID_AUTOPILOT1) {
-        // Don't create vehicles for components other than the autopilot
-        qCDebug(MultiVehicleManagerLog()) << "Ignoring heartbeat from unknown component port:vehicleId:componentId:fwType:vehicleType"
-                                          << link->linkConfiguration()->name()
-                                          << vehicleId
-                                          << componentId
-                                          << vehicleFirmwareType
-                                          << vehicleType;
-        return;
+    // Special case PX4 Flow since depending on firmware it can have different settings. We force to the PX4 Firmware settings.
+    if (link->isPX4Flow()) {
+        vehicleId = 81;
+        componentId = 50;//MAV_COMP_ID_AUTOPILOT1;
+        vehicleFirmwareType = MAV_AUTOPILOT_GENERIC;
+        vehicleType = 0;
     }
 
-#if !defined(NO_ARDUPILOT_DIALECT)
-    // When you flash a new ArduCopter it does not set a FRAME_CLASS for some reason. This is the only ArduPilot variant which
-    // works this way. Because of this the vehicle type is not known at first connection. In order to make QGC work reasonably
-    // we assume ArduCopter for this case.
-    if (vehicleType == 0 && vehicleFirmwareType == MAV_AUTOPILOT_ARDUPILOTMEGA) {
-        vehicleType = MAV_TYPE_QUADROTOR;
+    if (componentId != MAV_COMP_ID_AUTOPILOT1) {
+        // Special case for PX4 Flow
+        if (vehicleId != 81 || componentId != 50) {
+            // Don't create vehicles for components other than the autopilot
+            qCDebug(MultiVehicleManagerLog()) << "Ignoring heartbeat from unknown component "
+                                              << link->getName()
+                                              << vehicleId
+                                              << componentId
+                                              << vehicleFirmwareType
+                                              << vehicleType;
+            return;
+        }
     }
-#endif
 
     if (_vehicles.count() > 0 && !qgcApp()->toolbox()->corePlugin()->options()->multiVehicleEnabled()) {
         return;
@@ -109,37 +116,37 @@ void MultiVehicleManager::_vehicleHeartbeatInfo(LinkInterface* link, int vehicle
     }
 
     qCDebug(MultiVehicleManagerLog()) << "Adding new vehicle link:vehicleId:componentId:vehicleFirmwareType:vehicleType "
-                                      << link->linkConfiguration()->name()
+                                      << link->getName()
                                       << vehicleId
                                       << componentId
                                       << vehicleFirmwareType
                                       << vehicleType;
 
     if (vehicleId == _mavlinkProtocol->getSystemId()) {
-        _app->showAppMessage(tr("Warning: A vehicle is using the same system id as %1: %2").arg(QCoreApplication::applicationName()).arg(vehicleId));
+        _app->showMessage(tr("Warning: A vehicle is using the same system id as %1: %2").arg(qgcApp()->applicationName()).arg(vehicleId));
     }
 
-    Vehicle* vehicle = new Vehicle(link, vehicleId, componentId, (MAV_AUTOPILOT)vehicleFirmwareType, (MAV_TYPE)vehicleType, _firmwarePluginManager, _joystickManager, this);
-    connect(vehicle,                        &Vehicle::requestProtocolVersion,           this, &MultiVehicleManager::_requestProtocolVersion);
-    connect(vehicle->vehicleLinkManager(),  &VehicleLinkManager::allLinksRemoved,       this, &MultiVehicleManager::_deleteVehiclePhase1);
-    connect(vehicle->parameterManager(),    &ParameterManager::parametersReadyChanged,  this, &MultiVehicleManager::_vehicleParametersReadyChanged);
+    Vehicle* vehicle = new Vehicle(link, vehicleId, componentId, (MAV_AUTOPILOT)vehicleFirmwareType, (MAV_TYPE)vehicleType, _firmwarePluginManager, _joystickManager);
+    connect(vehicle, &Vehicle::allLinksInactive, this, &MultiVehicleManager::_deleteVehiclePhase1);
+    connect(vehicle, &Vehicle::requestProtocolVersion, this, &MultiVehicleManager::_requestProtocolVersion);
+    connect(vehicle->parameterManager(), &ParameterManager::parametersReadyChanged, this, &MultiVehicleManager::_vehicleParametersReadyChanged);
 
     _vehicles.append(vehicle);
 
     // Send QGC heartbeat ASAP, this allows PX4 to start accepting commands
     _sendGCSHeartbeat();
 
-    qgcApp()->toolbox()->settingsManager()->firmwareUpgradeSettings()->defaultFirmwareType()->setRawValue(vehicleFirmwareType);
+    qgcApp()->toolbox()->settingsManager()->appSettings()->defaultFirmwareType()->setRawValue(vehicleFirmwareType);
 
     emit vehicleAdded(vehicle);
 
     if (_vehicles.count() > 1) {
-        qgcApp()->showAppMessage(tr("Connected to Vehicle %1").arg(vehicleId));
+        qgcApp()->showMessage(tr("Connected to Vehicle %1").arg(vehicleId));
     } else {
         setActiveVehicle(vehicle);
     }
 
-#if defined (Q_OS_IOS) || defined(Q_OS_ANDROID)
+#if defined (__ios__) || defined(__android__)
     if(_vehicles.count() == 1) {
         //-- Once a vehicle is connected, keep screen from going off
         qCDebug(MultiVehicleManagerLog) << "QAndroidJniObject::keepScreenOn";
@@ -194,6 +201,9 @@ void MultiVehicleManager::_deleteVehiclePhase1(Vehicle* vehicle)
         qWarning() << "Vehicle not found in map!";
     }
 
+    vehicle->setActive(false);
+    vehicle->uas()->shutdownVehicle();
+
     // First we must signal that a vehicle is no longer available.
     _activeVehicleAvailable = false;
     _parameterReadyVehicleAvailable = false;
@@ -202,7 +212,7 @@ void MultiVehicleManager::_deleteVehiclePhase1(Vehicle* vehicle)
     emit vehicleRemoved(vehicle);
     vehicle->prepareDelete();
 
-#if defined (Q_OS_IOS) || defined(Q_OS_ANDROID)
+#if defined (__ios__) || defined(__android__)
     if(_vehicles.count() == 0) {
         //-- Once no vehicles are connected, we no longer need to keep screen from going off
         qCDebug(MultiVehicleManagerLog) << "QAndroidJniObject::restoreScreenOn";
@@ -211,11 +221,11 @@ void MultiVehicleManager::_deleteVehiclePhase1(Vehicle* vehicle)
 #endif
 
     // We must let the above signals flow through the system as well as get back to the main loop event queue
-    // before we can actually delete the Vehicle. The reason is that Qml may be holding on to references to it.
+    // before we can actually delete the Vehicle. The reason is that Qml may be holding on the references to it.
     // Even though the above signals should unload any Qml which has references, that Qml will not be destroyed
     // until we get back to the main loop. So we set a short timer which will then fire after Qt has finished
     // doing all of its internal nastiness to clean up the Qml. This works for both the normal running case
-    // as well as the unit testing case which of course has a different signal flow!
+    // as well as the unit testing case whichof course has a different signal flow!
     QTimer::singleShot(20, this, &MultiVehicleManager::_deleteVehiclePhase2);
 }
 
@@ -235,6 +245,7 @@ void MultiVehicleManager::_deleteVehiclePhase2(void)
     emit activeVehicleChanged(newActiveVehicle);
 
     if (_activeVehicle) {
+        _activeVehicle->setActive(true);
         emit activeVehicleAvailableChanged(true);
         if (_activeVehicle->parameterManager()->parametersReady()) {
             emit parameterReadyVehicleAvailableChanged(true);
@@ -251,6 +262,8 @@ void MultiVehicleManager::setActiveVehicle(Vehicle* vehicle)
 
     if (vehicle != _activeVehicle) {
         if (_activeVehicle) {
+            _activeVehicle->setActive(false);
+
             // The sequence of signals is very important in order to not leave Qml elements connected
             // to a non-existent vehicle.
 
@@ -286,6 +299,7 @@ void MultiVehicleManager::_setActiveVehiclePhase2(void)
 
     // And finally vehicle availability
     if (_activeVehicle) {
+        _activeVehicle->setActive(true);
         _activeVehicleAvailable = true;
         emit activeVehicleAvailableChanged(true);
 
@@ -360,14 +374,11 @@ void MultiVehicleManager::setGcsHeartbeatEnabled(bool gcsHeartBeatEnabled)
 
 void MultiVehicleManager::_sendGCSHeartbeat(void)
 {
-    LinkManager*                    linkManager = qgcApp()->toolbox()->linkManager();
-    QList<SharedLinkInterfacePtr>   sharedLinks = linkManager->links();
-
     // Send a heartbeat out on each link
-    for (int i=0; i<sharedLinks.count(); i++) {
-        LinkInterface* link = sharedLinks[i].get();
-        auto linkConfiguration = link->linkConfiguration();
-        if (link->isConnected() && linkConfiguration && !linkConfiguration->isHighLatency()) {
+    LinkManager* linkMgr = _toolbox->linkManager();
+    for (int i=0; i<linkMgr->links().count(); i++) {
+        LinkInterface* link = linkMgr->links()[i];
+        if (link->isConnected() && !link->highLatency()) {
             mavlink_message_t message;
             mavlink_msg_heartbeat_pack_chan(_mavlinkProtocol->getSystemId(),
                                             _mavlinkProtocol->getComponentId(),
@@ -381,7 +392,23 @@ void MultiVehicleManager::_sendGCSHeartbeat(void)
 
             uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
             int len = mavlink_msg_to_send_buffer(buffer, &message);
-            link->writeBytesThreadSafe((const char*)buffer, len);
+
+            link->writeBytesSafe((const char*)buffer, len);
         }
     }
+}
+
+bool MultiVehicleManager::linkInUse(LinkInterface* link, Vehicle* skipVehicle)
+{
+    for (int i=0; i< _vehicles.count(); i++) {
+        Vehicle* vehicle = qobject_cast<Vehicle*>(_vehicles[i]);
+
+        if (vehicle != skipVehicle) {
+            if (vehicle->containsLink(link)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }

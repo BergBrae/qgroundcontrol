@@ -7,30 +7,28 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtQuick.Controls
+import QtQuick                      2.11
+import QtQuick.Controls             2.4
 
-import QGroundControl
-import QGroundControl.Controls
-import QGroundControl.ScreenTools
+import QGroundControl               1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.ScreenTools   1.0
 
 // Label control whichs pop up a flight mode change menu when clicked
 QGCLabel {
-    id:     _root
+    id:     flightModeMenuLabel
     text:   currentVehicle ? currentVehicle.flightMode : qsTr("N/A", "No data to display")
 
-    property var    currentVehicle:         QGroundControl.multiVehicleManager.activeVehicle
-    property real   mouseAreaLeftMargin:    0
+    property var currentVehicle: QGroundControl.multiVehicleManager.activeVehicle
 
-    Menu {
+    QGCMenu {
         id: flightModesMenu
     }
 
     Component {
         id: flightModeMenuItemComponent
 
-        MenuItem {
-            enabled: true
+        QGCMenuItem {
             onTriggered: currentVehicle.flightMode = text
         }
     }
@@ -54,18 +52,16 @@ QGCLabel {
         }
     }
 
-    Component.onCompleted: _root.updateFlightModesMenu()
+    Component.onCompleted: flightModeMenuLabel.updateFlightModesMenu()
 
     Connections {
         target:                 QGroundControl.multiVehicleManager
-        function onActiveVehicleChanged(activeVehicle) { _root.updateFlightModesMenu() }
+        onActiveVehicleChanged: flightModeMenuLabel.updateFlightModesMenu()
     }
 
     MouseArea {
-        id:                 mouseArea
-        visible:            currentVehicle && currentVehicle.flightModeSetAvailable
-        anchors.leftMargin: mouseAreaLeftMargin
-        anchors.fill:       parent
-        onClicked:          flightModesMenu.popup((_root.width - flightModesMenu.width) / 2, _root.height)
+        visible:        currentVehicle && currentVehicle.flightModeSetAvailable
+        anchors.fill:   parent
+        onClicked:      flightModesMenu.popup()
     }
 }

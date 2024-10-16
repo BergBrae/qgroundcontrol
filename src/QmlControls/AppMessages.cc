@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -17,9 +17,9 @@
 #include "SettingsManager.h"
 #include "AppSettings.h"
 
-#include <QtCore/QStringListModel>
-#include <QtConcurrent/QtConcurrent>
-#include <QtCore/QTextStream>
+#include <QStringListModel>
+#include <QtConcurrent>
+#include <QTextStream>
 
 Q_GLOBAL_STATIC(AppLogModel, debug_model)
 
@@ -68,7 +68,7 @@ void AppLogModel::writeMessages(const QString dest_file)
 {
     const QString writebuffer(stringList().join('\n').append('\n'));
 
-    QFuture<void> future = QtConcurrent::run([dest_file, writebuffer] {
+    QtConcurrent::run([dest_file, writebuffer] {
         emit debug_model->writeStarted();
         bool success = false;
         QFile file(dest_file);
@@ -105,7 +105,7 @@ void AppLogModel::threadsafeLog(const QString message)
 
             _logFile.setFileName(saveFilePath);
             if (!_logFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-                qgcApp()->showAppMessage(tr("Open console log output file failed %1 : %2").arg(_logFile.fileName()).arg(_logFile.errorString()));
+                qgcApp()->showMessage(tr("Open console log output file failed %1 : %2").arg(_logFile.fileName()).arg(_logFile.errorString()));
             }
         }
     }

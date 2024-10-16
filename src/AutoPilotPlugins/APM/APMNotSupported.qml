@@ -8,9 +8,9 @@
  ****************************************************************************/
 
 
-import QtQuick
+import QtQuick 2.3
 
-import QGroundControl.Controls
+import QGroundControl.Controls 1.0
 
 QGCLabel {
     anchors.fill:           parent

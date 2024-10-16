@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,12 +9,12 @@
 
 
 #include "PX4TuningComponent.h"
-#include "QGCMAVLink.h"
-#include "Vehicle.h"
+#include "PX4AutoPilotPlugin.h"
+#include "AirframeComponent.h"
 
 PX4TuningComponent::PX4TuningComponent(Vehicle* vehicle, AutoPilotPlugin* autopilot, QObject* parent)
     : VehicleComponent(vehicle, autopilot, parent)
-    , _name(tr("PID Tuning"))
+    , _name(tr("Tuning"))
 {
 }
 
@@ -25,7 +25,7 @@ QString PX4TuningComponent::name(void) const
 
 QString PX4TuningComponent::description(void) const
 {
-    return tr("Tuning Setup is used to tune the flight controllers.");
+    return tr("Tuning Setup is used to tune the flight characteristics of the Vehicle.");
 }
 
 QString PX4TuningComponent::iconResource(void) const
@@ -64,12 +64,12 @@ QUrl PX4TuningComponent::setupSource(void) const
         case MAV_TYPE_TRICOPTER:
             qmlFile = "qrc:/qml/PX4TuningComponentCopter.qml";
             break;
-        case MAV_TYPE_VTOL_TAILSITTER_DUOROTOR:
-        case MAV_TYPE_VTOL_TAILSITTER_QUADROTOR:
+        case MAV_TYPE_VTOL_DUOROTOR:
+        case MAV_TYPE_VTOL_QUADROTOR:
         case MAV_TYPE_VTOL_TILTROTOR:
-        case MAV_TYPE_VTOL_FIXEDROTOR:
-        case MAV_TYPE_VTOL_TAILSITTER:
-        case MAV_TYPE_VTOL_TILTWING:
+        case MAV_TYPE_VTOL_RESERVED2:
+        case MAV_TYPE_VTOL_RESERVED3:
+        case MAV_TYPE_VTOL_RESERVED4:
         case MAV_TYPE_VTOL_RESERVED5:
             qmlFile = "qrc:/qml/PX4TuningComponentVTOL.qml";
             break;

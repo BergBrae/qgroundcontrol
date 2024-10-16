@@ -1,21 +1,20 @@
-/****************************************************************************
+/*!
+ * @file
+ *   @brief Camera Controller
+ *   @author Gus Grubba <gus@auterion.com>
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
+ */
+
+/// @file
+/// @brief  MAVLink Camera API. Camera parameter handler.
+/// @author Gus Grubba <gus@auterion.com>
 
 #pragma once
 
-#include "MAVLinkLib.h"
-#include <QtCore/QLoggingCategory>
+#include "QGCApplication.h"
+#include <QLoggingCategory>
 
-class MavlinkCameraControl;
-class Fact;
-class Vehicle;
-class MAVLinkProtocol;
+class QGCCameraControl;
 
 Q_DECLARE_LOGGING_CATEGORY(CameraIOLog)
 Q_DECLARE_LOGGING_CATEGORY(CameraIOLogVerbose)
@@ -43,12 +42,12 @@ typedef struct {
 class QGCCameraParamIO : public QObject
 {
 public:
-    QGCCameraParamIO(MavlinkCameraControl* control, Fact* fact, Vehicle* vehicle);
+    QGCCameraParamIO(QGCCameraControl* control, Fact* fact, Vehicle* vehicle);
 
     void        handleParamAck              (const mavlink_param_ext_ack_t& ack);
     void        handleParamValue            (const mavlink_param_ext_value_t& value);
     void        setParamRequest             ();
-    bool        paramDone                   () const { return _done; }
+    bool        paramDone                   () { return _done; }
     void        paramRequest                (bool reset = true);
     void        sendParameter               (bool updateUI = false);
 
@@ -66,7 +65,7 @@ private:
     QVariant    _valueFromMessage           (const char* value, uint8_t param_type);
 
 private:
-    MavlinkCameraControl*   _control;
+    QGCCameraControl*   _control;
     Fact*               _fact;
     Vehicle*            _vehicle;
     int                 _sentRetries;

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,8 +9,7 @@
 
 
 #include "PX4RadioComponent.h"
-#include "ParameterManager.h"
-#include "Vehicle.h"
+#include "PX4AutoPilotPlugin.h"
 
 PX4RadioComponent::PX4RadioComponent(Vehicle* vehicle, AutoPilotPlugin* autopilot, QObject* parent) :
     VehicleComponent(vehicle, autopilot, parent),
@@ -44,8 +43,8 @@ bool PX4RadioComponent::setupComplete(void) const
     if (_vehicle->parameterManager()->getParameter(-1, "COM_RC_IN_MODE")->rawValue().toInt() != 1) {
         // The best we can do to detect the need for a radio calibration is look for attitude
         // controls to be mapped.
-        for(const char* const&mapParam : {"RC_MAP_ROLL", "RC_MAP_PITCH", "RC_MAP_YAW", "RC_MAP_THROTTLE"}) {
-            if (_vehicle->parameterManager()->getParameter(ParameterManager::defaultComponentId, mapParam)->rawValue().toInt() == 0) {
+        for(const QString &mapParam : {"RC_MAP_ROLL", "RC_MAP_PITCH", "RC_MAP_YAW", "RC_MAP_THROTTLE"}) {
+            if (_vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, mapParam)->rawValue().toInt() == 0) {
                 return false;
             }
         }

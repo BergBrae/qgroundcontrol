@@ -7,13 +7,13 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtPositioning
+import QtQuick          2.3
+import QtPositioning    5.3
 
-import QGroundControl
-import QGroundControl.FlightMap
+import QGroundControl           1.0
+import QGroundControl.FlightMap 1.0
 
-/// Set of functions for fitting the map view to a specific constraint
+/// Set of functions for fitting the map viewpoer to a specific constraint
 Item {
     property var    map
     property bool   usePlannedHomePosition      ///< true: planned home position used for calculations, false: vehicle home position use for calculations

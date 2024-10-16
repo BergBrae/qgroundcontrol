@@ -8,16 +8,18 @@
  ****************************************************************************/
 
 
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+import QtQuick                  2.3
+import QtQuick.Controls         1.2
+import QtQuick.Controls.Styles  1.4
+import QtQuick.Layouts          1.2
+import QtGraphicalEffects       1.0
 
-import QGroundControl
-import QGroundControl.FactSystem
-import QGroundControl.FactControls
-import QGroundControl.Controls
-import QGroundControl.ScreenTools
-import QGroundControl.Palette
+import QGroundControl               1.0
+import QGroundControl.FactSystem    1.0
+import QGroundControl.FactControls  1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.ScreenTools   1.0
+import QGroundControl.Palette       1.0
 
 SetupPage {
     id:             safetyPage
@@ -37,7 +39,7 @@ SetupPage {
 
             property real _margins:         ScreenTools.defaultFontPixelHeight
             property real _labelWidth:      ScreenTools.defaultFontPixelWidth  * 30
-            property real _editFieldWidth:  ScreenTools.defaultFontPixelWidth  * 20
+            property real _editFieldWidth:  ScreenTools.defaultFontPixelWidth  * 24
             property real _imageHeight:     ScreenTools.defaultFontPixelHeight * 3
             property real _imageWidth:      _imageHeight * 2
 
@@ -170,11 +172,10 @@ SetupPage {
                                 Layout.minimumWidth:_editFieldWidth
                                 Layout.fillWidth:   true
                                 currentIndex:       _collisionPrevention ? (_collisionPrevention.rawValue > 0 ? 1 : 0) : 0
-                                onActivated: (index) => {
+                                onActivated: {
                                     if(_collisionPrevention) {
                                         _collisionPrevention.value = index > 0 ? 5 : -1
                                         console.log('Collision prevention enabled: ' + _collisionPrevention.value)
-                                        showObstacleDistanceOverlayCheckBox.checked = _collisionPrevention.value > 0
                                     }
                                 }
                             }
@@ -189,7 +190,7 @@ SetupPage {
                                 Layout.minimumWidth:_editFieldWidth
                                 Layout.fillWidth:   true
                                 currentIndex:       _objectAvoidance ? (_objectAvoidance.value === 0 ? 0 : 1) : 0
-                                onActivated: (index) => {
+                                onActivated: {
                                     if(_objectAvoidance) {
                                         _objectAvoidance.value = index > 0 ? 1 : 0
                                     }
@@ -197,7 +198,7 @@ SetupPage {
                             }
 
                             QGCLabel {
-                                text:               qsTr("Minimum Distance: (") + QGroundControl.unitsConversion.appSettingsHorizontalDistanceUnitsString + ")"
+                                text:               qsTr("Minimum Distance: (") + QGroundControl.appSettingsDistanceUnitsString + ")"
                                 Layout.fillWidth:   true
                                 Layout.alignment:   Qt.AlignVCenter
                             }
@@ -208,15 +209,15 @@ SetupPage {
                                 Layout.minimumHeight:   ScreenTools.defaultFontPixelHeight * 2
                                 Layout.fillWidth:   true
                                 Layout.fillHeight:  true
-                                to:       QGroundControl.unitsConversion.metersToAppSettingsHorizontalDistanceUnits(15)
-                                from:       QGroundControl.unitsConversion.metersToAppSettingsHorizontalDistanceUnits(1)
+                                maximumValue:       QGroundControl.metersToAppSettingsDistanceUnits(15)
+                                minimumValue:       QGroundControl.metersToAppSettingsDistanceUnits(1)
                                 stepSize:           1
                                 displayValue:       true
-                                live:   false
+                                updateValueWhileDragging:   false
                                 Layout.alignment:   Qt.AlignVCenter
                                 value: {
                                     if (_collisionPrevention && _collisionPrevention.rawValue > 0) {
-                                        return QGroundControl.unitsConversion.metersToAppSettingsHorizontalDistanceUnits(_collisionPrevention.rawValue)
+                                        return QGroundControl.metersToAppSettingsDistanceUnits(_collisionPrevention.rawValue)
                                     } else {
                                         return 1;
                                     }
@@ -225,19 +226,10 @@ SetupPage {
                                     if(_collisionPrevention) {
                                         //-- Negative means disabled
                                         if(_collisionPrevention.rawValue >= 0) {
-                                            _collisionPrevention.rawValue = QGroundControl.unitsConversion.appSettingsHorizontalDistanceUnitsToMeters(value)
+                                            _collisionPrevention.rawValue = QGroundControl.appSettingsDistanceUnitsToMeters(value)
                                         }
                                     }
                                 }
-                            }
-
-                            FactCheckBox {
-                                id:         showObstacleDistanceOverlayCheckBox
-                                text:       qsTr("Show obstacle distance overlay")
-                                visible:    _showObstacleDistanceOverlay.visible
-                                fact:       _showObstacleDistanceOverlay
-
-                                property Fact _showObstacleDistanceOverlay: QGroundControl.settingsManager.flyViewSettings.showObstacleDistanceOverlay
                             }
                         }
                     }
@@ -612,7 +604,7 @@ SetupPage {
                                 Component.onCompleted: {
                                     currentIndex = _enableLogging ? (_enableLogging.value >= 0 ? 1 : 0) : 0
                                 }
-                                onActivated: (index) => {
+                                onActivated: {
                                     if(_enableLogging) {
                                         _enableLogging.value = index > 0 ? 0 : -1
                                     }

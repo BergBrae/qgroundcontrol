@@ -1,48 +1,33 @@
-if(NOT QGC_DISABLE_APM_PLUGIN)
-    add_subdirectory(APM)
-endif()
-if(NOT QGC_DISABLE_PX4_PLUGIN)
-    add_subdirectory(PX4)
-endif()
+add_subdirectory(APM)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Positioning)
+add_library(FirmwarePlugin
+	CameraMetaData.cc
+	FirmwarePlugin.cc
+	FirmwarePluginManager.cc
 
-qt_add_library(FirmwarePlugin STATIC
-    CameraMetaData.cc
-    CameraMetaData.h
-    FirmwarePlugin.cc
-    FirmwarePlugin.h
-    FirmwarePluginFactory.cc
-    FirmwarePluginFactory.h
-    FirmwarePluginManager.cc
-    FirmwarePluginManager.h
-    $<$<NOT:$<BOOL:${QGC_DISABLE_APM_PLUGIN_FACTORY}>>:APM/APMFirmwarePluginFactory.cc>
-    $<$<NOT:$<BOOL:${QGC_DISABLE_APM_PLUGIN_FACTORY}>>:APM/APMFirmwarePluginFactory.h>
-    $<$<NOT:$<BOOL:${QGC_DISABLE_PX4_PLUGIN_FACTORY}>>:PX4/PX4FirmwarePluginFactory.cc>
-    $<$<NOT:$<BOOL:${QGC_DISABLE_PX4_PLUGIN_FACTORY}>>:PX4/PX4FirmwarePluginFactory.h>
+	APM/APMFirmwarePlugin.cc
+	APM/APMFirmwarePluginFactory.cc
+	APM/APMParameterMetaData.cc
+	APM/ArduCopterFirmwarePlugin.cc
+	APM/ArduPlaneFirmwarePlugin.cc
+	APM/ArduRoverFirmwarePlugin.cc
+	APM/ArduSubFirmwarePlugin.cc
+	APM/APMResources.qrc
+
+	PX4/PX4FirmwarePlugin.cc
+	PX4/PX4FirmwarePluginFactory.cc
+	PX4/PX4ParameterMetaData.cc
+	PX4/PX4Resources.qrc
 )
 
 target_link_libraries(FirmwarePlugin
-    PRIVATE
-        AutoPilotPlugins
-        Camera
-        CommonAutoPilotPlugin
-        MissionManager
-        QGC
-        Utilities
-        VehicleSetup
-        $<$<NOT:$<BOOL:${QGC_DISABLE_APM_PLUGIN}>>:APMFirmwarePlugin>
-        $<$<NOT:$<BOOL:${QGC_DISABLE_PX4_PLUGIN}>>:PX4FirmwarePlugin>
-    PUBLIC
-        Qt6::Core
-        Qt6::Positioning
-        FactSystem
-        FollowMe
-        MAVLink
+	PRIVATE
+		qgc
 )
 
-target_include_directories(FirmwarePlugin PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(FirmwarePlugin
+	INTERFACE
+		${CMAKE_CURRENT_SOURCE_DIR}
+                APM
+	)
 
-# if(QGC_DISABLE_APM_MAVLINK)
-#     target_compile_definitions(FirmwarePlugin PUBLIC NO_ARDUPILOT_DIALECT)
-# endif()

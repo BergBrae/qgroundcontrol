@@ -7,23 +7,64 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Dialogs
-import QtQuick.Layouts
+import QtQuick                  2.3
+import QtQuick.Controls         1.2
+import QtQuick.Controls.Styles  1.4
+import QtQuick.Dialogs          1.2
 
-import QGroundControl
-import QGroundControl.Palette
-import QGroundControl.Controls
-import QGroundControl.FactSystem
-import QGroundControl.FactControls
-import QGroundControl.Controllers
-import QGroundControl.ScreenTools
+import QGroundControl               1.0
+import QGroundControl.Palette       1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.FactSystem    1.0
+import QGroundControl.FactControls  1.0
+import QGroundControl.Controllers   1.0
+import QGroundControl.ScreenTools   1.0
 
 Item {
     id:         _root
 
     property bool loaded: false
+
+    Component {
+        id: filtersDialogComponent
+        QGCViewDialog {
+            QGCFlickable {
+                anchors.fill:   parent
+                contentHeight:  categoryColumn.height
+                clip:           true
+                Column {
+                    id:         categoryColumn
+                    spacing:    ScreenTools.defaultFontPixelHeight / 2
+
+                    QGCButton {
+                        text: qsTr("Clear All")
+                        onClicked: {
+                            var logCats = QGroundControl.loggingCategories()
+                            for (var i=0; i<logCats.length; i++) {
+                                QGroundControl.setCategoryLoggingOn(logCats[i], false)
+                            }
+                            QGroundControl.updateLoggingFilterRules()
+                            categoryRepeater.model = undefined
+                            categoryRepeater.model = QGroundControl.loggingCategories()
+                        }
+                    }
+                    Repeater {
+                        id:     categoryRepeater
+                        model:  QGroundControl.loggingCategories()
+
+                        QGCCheckBox {
+                            text:       modelData
+                            checked:    QGroundControl.categoryLoggingOn(modelData)
+                            onClicked:  {
+                                QGroundControl.setCategoryLoggingOn(modelData, checked)
+                                QGroundControl.updateLoggingFilterRules()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     Item {
         id:             panel
@@ -84,8 +125,10 @@ Item {
                 id:             writeDialog
                 folder:         QGroundControl.settingsManager.appSettings.logSavePath
                 nameFilters:    [qsTr("Log files (*.txt)"), qsTr("All Files (*)")]
+                fileExtension:  qsTr("txt")
+                selectExisting: false
                 title:          qsTr("Select log save file")
-                onAcceptedForSave: (file) => {
+                onAcceptedForSave: {
                     debugMessageModel.writeMessages(file);
                     visible = false;
                 }
@@ -106,12 +149,12 @@ Item {
             }
 
             QGCLabel {
-                id:                     gstLabel
-                anchors.left:           writeButton.right
-                anchors.leftMargin:     ScreenTools.defaultFontPixelWidth
-                anchors.verticalCenter: gstCombo.verticalCenter
-                text:                   qsTr("GStreamer Debug Level")
-                visible:                QGroundControl.settingsManager.appSettings.gstDebugLevel.visible
+                id:                 gstLabel
+                anchors.left:       writeButton.right
+                anchors.leftMargin: ScreenTools.defaultFontPixelWidth
+                anchors.baseline:   gstCombo.baseline
+                text:               qsTr("GStreamer Debug")
+                visible:            QGroundControl.settingsManager.appSettings.gstDebugLevel.visible
             }
 
             FactComboBox {
@@ -119,9 +162,10 @@ Item {
                 anchors.left:       gstLabel.right
                 anchors.leftMargin: ScreenTools.defaultFontPixelWidth / 2
                 anchors.bottom:     parent.bottom
+                width:              ScreenTools.defaultFontPixelWidth * 10
+                model:              ["Disabled", "1", "2", "3", "4", "5", "6", "7", "8"]
                 fact:               QGroundControl.settingsManager.appSettings.gstDebugLevel
                 visible:            QGroundControl.settingsManager.appSettings.gstDebugLevel.visible
-                sizeToContents:     true
             }
 
             QGCButton {
@@ -145,80 +189,7 @@ Item {
                 anchors.bottom: parent.bottom
                 anchors.right:  parent.right
                 text:           qsTr("Set Logging")
-                onClicked:      filtersDialogComponent.createObject(mainWindow).open()
-            }
-        }
-    }
-
-    Component {
-        id: filtersDialogComponent
-
-        QGCPopupDialog {
-            title:      qsTr("Logging categories")
-            buttons:    Dialog.Close
-
-            ColumnLayout {
-                RowLayout {
-                    spacing: ScreenTools.defaultFontPixelHeight / 2
-                    Layout.alignment: Qt.AlignVCenter
-                    Layout.fillHeight: true
-                    Layout.fillWidth: true
-
-                    QGCLabel {
-                        text: qsTr("Search:")
-                    }
-
-                    QGCTextField {
-                        id: searchText
-                        text: ""
-                        Layout.fillWidth: true
-                        enabled: true
-                    }
-
-                    QGCButton {
-                        text: qsTr("Clear")
-                        onClicked: searchText.text = ""
-                    }
-                }
-
-                Row {
-                    spacing:    ScreenTools.defaultFontPixelHeight / 2
-                    QGCButton {
-                        text: qsTr("Clear All")
-                        onClicked: categoryRepeater.setAllLogs(false)
-                    }
-                }
-
-                Column {
-                    id:         categoryColumn
-                    spacing:    ScreenTools.defaultFontPixelHeight / 2
-
-                    Repeater {
-                        id:     categoryRepeater
-                        model:  QGroundControl.loggingCategories()
-
-                        function setAllLogs(value) {
-                            var logCategories = QGroundControl.loggingCategories()
-                            for (var category of logCategories) {
-                                QGroundControl.setCategoryLoggingOn(category, value)
-                            }
-                            QGroundControl.updateLoggingFilterRules()
-                            // Update model for repeater
-                            categoryRepeater.model = undefined
-                            categoryRepeater.model = QGroundControl.loggingCategories()
-                        }
-
-                        QGCCheckBox {
-                            text:       modelData
-                            visible:    searchText.text ? text.match(`(${searchText.text})`, "i") : true
-                            checked:    QGroundControl.categoryLoggingOn(modelData)
-                            onClicked:  {
-                                QGroundControl.setCategoryLoggingOn(modelData, checked)
-                                QGroundControl.updateLoggingFilterRules()
-                            }
-                        }
-                    }
-                }
+                onClicked:      mainWindow.showComponentDialog(filtersDialogComponent, qsTr("Turn on logging categories"), mainWindow.showDialogDefaultWidth, StandardButton.Close)
             }
         }
     }

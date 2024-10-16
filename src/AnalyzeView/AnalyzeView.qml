@@ -7,28 +7,35 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtQuick.Window
-import QtQuick.Controls
 
-import QGroundControl
-import QGroundControl.Palette
-import QGroundControl.Controls
-import QGroundControl.Controllers
-import QGroundControl.ScreenTools
+/// @file
+///     @brief Setup View
+///     @author Don Gagne <don@thegagnes.com>
+
+import QtQuick          2.3
+import QtQuick.Window   2.2
+import QtQuick.Controls 1.2
+
+import QGroundControl               1.0
+import QGroundControl.Palette       1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.Controllers   1.0
+import QGroundControl.ScreenTools   1.0
 
 Rectangle {
-    id:     _root
+    id:     setupView
     color:  qgcPal.window
     z:      QGroundControl.zOrderTopMost
 
-    signal popout()
+    ExclusiveGroup { id: setupButtonGroup }
 
     readonly property real  _defaultTextHeight:     ScreenTools.defaultFontPixelHeight
     readonly property real  _defaultTextWidth:      ScreenTools.defaultFontPixelWidth
     readonly property real  _horizontalMargin:      _defaultTextWidth / 2
     readonly property real  _verticalMargin:        _defaultTextHeight / 2
     readonly property real  _buttonWidth:           _defaultTextWidth * 18
+
+    property int _curIndex: 0
 
     GeoTagController {
         id: geoController
@@ -75,23 +82,54 @@ Rectangle {
                 }
             }
 
+            QGCLabel {
+                anchors.left:           parent.left
+                anchors.right:          parent.right
+                text:                   qsTr("Analyze")
+                wrapMode:               Text.WordWrap
+                horizontalAlignment:    Text.AlignHCenter
+                visible:                !ScreenTools.isShortScreen
+            }
+
             Repeater {
-                id:     buttonRepeater
-                model:  QGroundControl.corePlugin ? QGroundControl.corePlugin.analyzePages : []
-
+                id:                     buttonRepeater
+                model:                  QGroundControl.corePlugin ? QGroundControl.corePlugin.analyzePages : []
                 Component.onCompleted:  itemAt(0).checked = true
-
                 SubMenuButton {
                     id:                 subMenu
                     imageResource:      modelData.icon
                     setupIndicator:     false
-                    autoExclusive:      true
+                    exclusiveGroup:     setupButtonGroup
                     text:               modelData.title
-
+                    property var window:    analyzeWidgetWindow
+                    property var loader:    analyzeWidgetLoader
                     onClicked: {
-                        panelLoader.source  = modelData.url
-                        panelLoader.title   = modelData.title
-                        checked             = true
+                        _curIndex = index
+                        panelLoader.source = modelData.url
+                        checked = true
+                    }
+                    Window {
+                        id:             analyzeWidgetWindow
+                        width:          ScreenTools.defaultFontPixelWidth  * 100
+                        height:         ScreenTools.defaultFontPixelHeight * 40
+                        visible:        false
+                        title:          modelData.title
+                        Rectangle {
+                            color:      qgcPal.window
+                            anchors.fill:  parent
+                            Loader {
+                                id:             analyzeWidgetLoader
+                                anchors.fill:   parent
+                            }
+                        }
+                        onClosing: {
+                            analyzeWidgetWindow.visible = false
+                            analyzeWidgetLoader.source = ""
+                            _curIndex = index
+                            panelLoader.source = modelData.url
+                            subMenu.visible = true
+                            subMenu.checked = true
+                        }
                     }
                 }
             }
@@ -110,6 +148,18 @@ Rectangle {
         color:                  qgcPal.windowShade
     }
 
+    Connections {
+        target:                 panelLoader.item
+        onPopout: {
+            buttonRepeater.itemAt(_curIndex).window.visible = true
+            var source = panelLoader.source
+            panelLoader.source = ""
+            buttonRepeater.itemAt(_curIndex).loader.source = source
+            buttonRepeater.itemAt(_curIndex).visible = false
+            buttonRepeater.itemAt(_curIndex).loader.item.poped = true
+        }
+    }
+
     Loader {
         id:                     panelLoader
         anchors.topMargin:      _verticalMargin
@@ -121,12 +171,5 @@ Rectangle {
         anchors.top:            parent.top
         anchors.bottom:         parent.bottom
         source:                 "LogDownloadPage.qml"
-
-        property string title
-
-        Connections {
-            target:     panelLoader.item
-            onPopout:   mainWindow.createrWindowedAnalyzePage(panelLoader.title, panelLoader.source)
-        }
     }
 }

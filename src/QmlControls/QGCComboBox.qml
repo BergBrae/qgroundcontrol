@@ -7,14 +7,15 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtQuick.Window
-import QtQuick.Controls
-import QtQuick.Templates as T
+import QtQuick                  2.11
+import QtQuick.Window           2.3
+import QtQuick.Controls         2.4
+import QtQuick.Controls.impl    2.4
+import QtQuick.Templates        2.4 as T
 
-import QGroundControl.ScreenTools
-import QGroundControl.Palette
-import QGroundControl.Controls
+import QGroundControl.ScreenTools   1.0
+import QGroundControl.Palette       1.0
+import QGroundControl.Controls      1.0
 
 T.ComboBox {
     id:             control
@@ -26,7 +27,6 @@ T.ComboBox {
                              contentItem.implicitWidth + leftPadding + rightPadding + padding)
     implicitHeight: Math.max(background ? background.implicitHeight : 0,
                              Math.max(contentItem.implicitHeight, indicator ? indicator.implicitHeight : 0) + topPadding + bottomPadding)
-    baselineOffset: contentItem.y + text.baselineOffset
     leftPadding:    padding + (!control.mirrored || !indicator || !indicator.visible ? 0 : indicator.width + spacing)
     rightPadding:   padding + (control.mirrored || !indicator || !indicator.visible ? 0 : indicator.width)
 
@@ -34,11 +34,10 @@ T.ComboBox {
     property bool   sizeToContents: false
     property string alternateText:  ""
 
-    property real   _popupWidth
-    property bool   _onCompleted:   false
-    property bool   _showBorder:    qgcPal.globalTheme === QGCPalette.Light
-
-    QGCPalette { id: qgcPal; colorGroupEnabled: enabled }
+    property var    _qgcPal:            QGCPalette { colorGroupEnabled: enabled }
+    property real   _largestTextWidth:  0
+    property real   _popupWidth:        sizeToContents ? _largestTextWidth + itemDelegateMetrics.leftPadding + itemDelegateMetrics.rightPadding : control.width
+    property bool   _onCompleted:       false
 
     TextMetrics {
         id:                 textMetrics
@@ -53,23 +52,21 @@ T.ComboBox {
         font.pointSize: control.font.pointSize
     }
 
-    function _calcPopupWidth() {
-        _popupWidth = control.width
-        if (_onCompleted && sizeToContents && model) {
-            var largestTextWidth = 0
+    function _adjustSizeToContents() {
+        if (_onCompleted && sizeToContents) {
+            _largestTextWidth = 0
             for (var i = 0; i < model.length; i++){
-                textMetrics.text = control.textRole ? (Array.isArray(control.model) ? model[i][control.textRole] : model[control.textRole]) : model[i]
-                largestTextWidth = Math.max(textMetrics.width, largestTextWidth)
+                textMetrics.text = model[i]
+                _largestTextWidth = Math.max(textMetrics.width, _largestTextWidth)
             }
-            _popupWidth = largestTextWidth + itemDelegateMetrics.leftPadding + itemDelegateMetrics.rightPadding
         }
     }
 
-    onModelChanged: _calcPopupWidth()
+    onModelChanged: _adjustSizeToContents()
 
     Component.onCompleted: {
         _onCompleted = true
-        _calcPopupWidth()
+        _adjustSizeToContents()
     }
 
     // The items in the popup
@@ -88,12 +85,12 @@ T.ComboBox {
         contentItem: Text {
             text:                   _text
             font:                   control.font
-            color:                  control.currentIndex === index ? qgcPal.buttonHighlightText : qgcPal.buttonText
+            color:                  control.currentIndex === index ? _qgcPal.buttonHighlightText : _qgcPal.buttonText
             verticalAlignment:      Text.AlignVCenter
         }
 
         background: Rectangle {
-            color:                  control.currentIndex === index ? qgcPal.buttonHighlight : qgcPal.button
+            color:                  control.currentIndex === index ? _qgcPal.buttonHighlight : _qgcPal.button
         }
 
         highlighted:                control.highlightedIndex === index
@@ -106,28 +103,33 @@ T.ComboBox {
         height:                 ScreenTools.defaultFontPixelWidth
         width:                  height
         source:                 "/qmlimages/arrow-down.png"
-        color:                  qgcPal.buttonText
+        color:                  _qgcPal.text
     }
 
     // The label of the button
-    contentItem: QGCLabel {
-        id:                         text
-        anchors.verticalCenter:     parent.verticalCenter
-        anchors.horizontalCenter:   centeredLabel ? parent.horizontalCenter : undefined
-        text:                       control.alternateText === "" ? control.currentText : control.alternateText
-        font:                       control.font
-        color:                      qgcPal.buttonText
+    contentItem: Item {
+        implicitWidth:                  text.implicitWidth
+        implicitHeight:                 text.implicitHeight
+
+        QGCLabel {
+            id:                         text
+            anchors.verticalCenter:     parent.verticalCenter
+            anchors.horizontalCenter:   centeredLabel ? parent.horizontalCenter : undefined
+            text:                       control.alternateText === "" ? control.currentText : control.alternateText
+            font:                       control.font
+            color:                      _qgcPal.text
+        }
     }
 
     background: Rectangle {
-        color:          qgcPal.button
-        border.color:   qgcPal.buttonBorder
-        border.width:   _showBorder ? 1 : 0
-        radius:         ScreenTools.buttonBorderRadius
+        implicitWidth:  ScreenTools.implicitComboBoxWidth
+        implicitHeight: ScreenTools.implicitComboBoxHeight
+        color:          _qgcPal.window
+        border.width:   enabled ? 1 : 0
+        border.color:   "#999"
     }
 
     popup: T.Popup {
-        x:              control.width - _popupWidth
         y:              control.height
         width:          _popupWidth
         height:         Math.min(contentItem.implicitHeight, control.Window.height - topMargin - bottomMargin)
@@ -146,14 +148,14 @@ T.ComboBox {
                 width:          parent.width
                 height:         parent.height
                 color:          "transparent"
-                border.color:   qgcPal.text
+                border.color:   _qgcPal.text
             }
 
             T.ScrollIndicator.vertical: ScrollIndicator { }
         }
 
         background: Rectangle {
-            color: qgcPal.window
+            color: control.palette.window
         }
     }
 }

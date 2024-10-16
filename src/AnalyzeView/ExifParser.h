@@ -1,24 +1,18 @@
-/****************************************************************************
- *
- * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
- *
- * QGroundControl is licensed according to the terms in the file
- * COPYING.md in the root of the source code directory.
- *
- ****************************************************************************/
+#ifndef EXIFPARSER_H
+#define EXIFPARSER_H
 
-#pragma once
+#include <QGeoCoordinate>
+#include <QDebug>
 
-#include <QtCore/QLoggingCategory>
+#include "GeoTagController.h"
 
-#include "GeoTagWorker.h"
+class ExifParser
+{
+public:
+    ExifParser();
+    ~ExifParser();
+    double readTime(QByteArray& buf);
+    bool write(QByteArray& buf, GeoTagWorker::cameraFeedbackPacket& geotag);
+};
 
-class QByteArray;
-
-Q_DECLARE_LOGGING_CATEGORY(ExifParserLog)
-
-namespace ExifParser {
-    void init();
-    double readTime(const QByteArray &buf);
-    bool write(QByteArray &buf, const GeoTagWorker::cameraFeedbackPacket &geotag);
-}
+#endif // EXIFPARSER_H

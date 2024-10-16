@@ -7,12 +7,12 @@
  *
  ****************************************************************************/
 
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+import QtQuick                      2.11
+import QtQuick.Controls             2.4
+import QtQuick.Layouts              1.11
 
-import QGroundControl.Palette
-import QGroundControl.ScreenTools
+import QGroundControl.Palette       1.0
+import QGroundControl.ScreenTools   1.0
 
 Button {
     id:                 control

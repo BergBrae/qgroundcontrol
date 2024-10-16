@@ -1,8 +1,8 @@
-import QtQuick
-import QtQuick.Controls
+import QtQuick          2.3
+import QtQuick.Controls 1.2
 
-import QGroundControl.ScreenTools
-import QGroundControl.Palette
+import QGroundControl.ScreenTools 1.0
+import QGroundControl.Palette     1.0
 
 Canvas {
     id:     root
@@ -10,7 +10,7 @@ Canvas {
     width:  _width
     height: _height
 
-    signal clicked(point position)
+    signal clicked
 
     property string label                           ///< Label to show to the side of the index indicator
     property int    index:                  0       ///< Index to show in the indicator, 0 will show single char label instead, -1 first char of label in indicator full label to the side
@@ -31,10 +31,8 @@ Canvas {
     property real   _height:            showGimbalYaw ? _gimbalYawWidth : (labelControl.visible ? labelControl.height : indicator.height)
     property real   _gimbalYawRadius:   ScreenTools.defaultFontPixelHeight
     property real   _gimbalYawWidth:    _gimbalYawRadius * 2
-    property real   _smallRadiusRaw:    Math.ceil((ScreenTools.defaultFontPixelHeight * ScreenTools.smallFontPointRatio) / 2)
-    property real   _smallRadius:       _smallRadiusRaw + ((_smallRadiusRaw % 2 == 0) ? 1 : 0) // odd number for better centering
-    property real   _normalRadiusRaw:   Math.ceil(ScreenTools.defaultFontPixelHeight * 0.66)
-    property real   _normalRadius:      _normalRadiusRaw + ((_normalRadiusRaw % 2 == 0) ? 1 : 0)
+    property real   _smallRadius:       ((ScreenTools.defaultFontPixelHeight * ScreenTools.smallFontPointRatio) / 2) + 1
+    property real   _normalRadius:      ScreenTools.defaultFontPixelHeight * 0.66
     property real   _indicatorRadius:   small ? _smallRadius : _normalRadius
     property real   _gimbalRadians:     degreesToRadians(vehicleYaw + gimbalYaw - 90)
     property real   _labelMargin:       2
@@ -143,9 +141,9 @@ Canvas {
 
     QGCMouseArea {
         fillItem:   mouseAreaFill
-        onClicked: (mouse) => {
+        onClicked: {
             focus = true
-            parent.clicked(Qt.point(mouse.x, mouse.y))
+            parent.clicked()
         }
     }
 }

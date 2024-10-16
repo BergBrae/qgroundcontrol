@@ -1,13 +1,13 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
-import QtPositioning
+import QtQuick          2.3
+import QtQuick.Controls 1.2
+import QtQuick.Layouts  1.2
+import QtPositioning    5.2
 
-import QGroundControl
-import QGroundControl.ScreenTools
-import QGroundControl.Controls
-import QGroundControl.FactSystem
-import QGroundControl.FactControls
+import QGroundControl               1.0
+import QGroundControl.ScreenTools   1.0
+import QGroundControl.Controls      1.0
+import QGroundControl.FactSystem    1.0
+import QGroundControl.FactControls  1.0
 
 QGCFlickable {
     id:             root
@@ -62,7 +62,7 @@ QGCFlickable {
                     wrapMode:           Text.WordWrap
                     font.pointSize:     myGeoFenceController.supported ? ScreenTools.smallFontPointSize : ScreenTools.defaultFontPointSize
                     text:               myGeoFenceController.supported ?
-                                            qsTr("GeoFencing allows you to set a virtual fence around the area you want to fly in.") :
+                                            qsTr("GeoFencing allows you to set a virtual ‘fence’ around the area you want to fly in.") :
                                             qsTr("This vehicle does not support GeoFence.")
                 }
 
@@ -342,8 +342,9 @@ QGCFlickable {
                             text: qsTr("Altitude")
                         }
 
-                        FactTextField {
-                            fact: myGeoFenceController.breachReturnAltitude
+                        AltitudeFactTextField {
+                            fact:           myGeoFenceController.breachReturnAltitude
+                            altitudeMode:   QGroundControl.AltitudeModeRelative
                         }
                     }
 
